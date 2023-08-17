@@ -1,0 +1,67 @@
+BasedOnStyle: chromium
+Language:        Cpp
+BreakStringLiterals: true
+BreakBeforeTernaryOperators: true
+IndentWidth: 4
+NamespaceIndentation: None
+UseTab: Never
+BreakBeforeBraces: Custom
+AlignOperands: Align
+BraceWrapping:
+  AfterEnum: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterClass: true
+  SplitEmptyFunction: true
+  AfterFunction: true
+  AfterControlStatement: Always
+  BeforeElse: true
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: AfterComma
+AllowAllParametersOfDeclarationOnNextLine: false
+ContinuationIndentWidth: 4
+
+AlignAfterOpenBracket: Align
+BinPackArguments: false
+BinPackParameters: false
+
+FixNamespaceComments: true
+ReflowComments: true
+SpacesBeforeTrailingComments: 1
+
+ColumnLimit: 80
+AccessModifierOffset: -4
+
+IncludeCategories:
+- Priority: 2
+  Regex: ^"(llvm|llvm-c|clang|clang-c)/
+- Priority: 3
+  Regex: ^(<|"(gtest|gmock|isl|json)/)
+- Priority: 1
+  Regex: .*
+IncludeIsMainRegex: (Test)?$
+
+AllowShortCaseLabelsOnASingleLine: true
+BreakBeforeBinaryOperators: All
+Cpp11BracedListStyle: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpacesInContainerLiterals: false
+
+PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyExcessCharacter: 4
+PenaltyIndentedWhitespace: 0
+PenaltyBreakAssignment: 100
+PenaltyBreakOpenParenthesis: 0
+PenaltyBreakBeforeFirstCallParameter: 200
+PenaltyBreakTemplateDeclaration: 200
+PenaltyBreakComment: 0
+
+AllowShortFunctionsOnASingleLine: false
+AllowShortLambdasOnASingleLine: true
+AlwaysBreakTemplateDeclarations: true
+
+CommentPragmas:  '(^\\.+)|(@)'
+
+AllowAllArgumentsOnNextLine: true
