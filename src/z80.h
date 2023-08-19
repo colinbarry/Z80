@@ -1,8 +1,10 @@
 #include <stdint.h>
 
 struct Z80 {
-    uint8_t (*mem_load)(void*, uint16_t);
-    void (*mem_store)(void*, uint16_t, uint8_t);
+    uint8_t (*mem_load)(struct Z80*, uint16_t);
+    void (*mem_store)(struct Z80*, uint16_t, uint8_t);
+    uint8_t (*port_load)(struct Z80*, uint8_t);
+    void (*port_store)(struct Z80* z80, uint8_t, uint8_t);
     void* userdata;
 
     uint16_t pc;
@@ -28,6 +30,4 @@ void z80_step(struct Z80* z80);
 
 int z80_is_halted(struct Z80 const* z80);
 
-/** Debug test code. Will be removed later.
- * */
 void z80_trace(struct Z80* z80);
