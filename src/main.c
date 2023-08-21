@@ -20,12 +20,20 @@ static uint8_t port_load(struct Z80* z80, uint8_t const port)
 
 static void port_store(struct Z80* z80, uint8_t port, uint8_t const val)
 {
-    uint16_t addr = (z80->d << 8) | z80->e;
-    uint8_t byte;
-    while ((byte = mem_load(z80, addr++)) != '$') {
-        printf("%c", byte);
+    uint8_t operation = z80->c;
+
+    if (operation == 0x02) {
+        printf("%c", z80->e);
+    } else if (operation == 0x09) {
+        uint16_t addr = (z80->d << 8) | z80->e;
+        uint8_t byte;
+        while ((byte = mem_load(z80, addr++)) != '$') {
+            printf("%c", byte);
+        }
     }
 }
+
+static void catchdebug() {}
 
 int main(int argc, char **argv)
 {
@@ -36,7 +44,7 @@ int main(int argc, char **argv)
 
     memset(memory, 0, sizeof(memory));
 
-    if ((romfile = fopen("./roms/prelim.com", "rb")) == NULL) {
+    if ((romfile = fopen("./roms/zexdoc.cim", "rb")) == NULL) {
         printf("could not open rom file\n");
         exit(EXIT_FAILURE);
     }
@@ -67,8 +75,9 @@ int main(int argc, char **argv)
 
     z80.pc = 0x100;
     while (!z80_is_halted(&z80)) {
-        uint16_t ppc = z80.pc;
+        //printf("0x%04x: ", z80.pc);
         z80_step(&z80);
+        //puts("");
     }
 
     return EXIT_SUCCESS;
