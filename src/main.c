@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void catchdebug() {}
+
 static uint8_t mem_load(struct Z80* z80, uint16_t const addr)
 {
     return ((uint8_t*)z80->userdata)[addr];
@@ -10,6 +12,11 @@ static uint8_t mem_load(struct Z80* z80, uint16_t const addr)
 
 static void mem_store(struct Z80* z80, uint16_t const addr, uint8_t const value)
 {
+    /*
+    if (addr == 0x1ab) {
+        printf("WR: 0x%04x = 0x%02x PC: 0x%04x\n", addr, value, z80->pc);
+    }*/
+
     ((uint8_t*)z80->userdata)[addr] = value;
 }
 
@@ -29,11 +36,12 @@ static void port_store(struct Z80* z80, uint8_t port, uint8_t const val)
         uint8_t byte;
         while ((byte = mem_load(z80, addr++)) != '$') {
             printf("%c", byte);
+            if (byte == '*') 
+                exit(EXIT_FAILURE); // @TODO during testing
         }
     }
 }
 
-static void catchdebug() {}
 
 int main(int argc, char **argv)
 {
@@ -45,6 +53,7 @@ int main(int argc, char **argv)
     memset(memory, 0, sizeof(memory));
 
     if ((romfile = fopen("./roms/zexdoc.cim", "rb")) == NULL) {
+    //if ((romfile = fopen("./roms/prelim.com", "rb")) == NULL) {
         printf("could not open rom file\n");
         exit(EXIT_FAILURE);
     }

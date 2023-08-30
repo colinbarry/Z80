@@ -31,3 +31,5 @@ void z80_step(struct Z80* z80);
 int z80_is_halted(struct Z80 const* z80);
 
 void z80_trace(struct Z80* z80);
+
+void z80_test(struct Z80* z80);
