@@ -36,8 +36,6 @@ static void port_store(struct Z80* z80, uint8_t port, uint8_t const val)
         uint8_t byte;
         while ((byte = mem_load(z80, addr++)) != '$') {
             printf("%c", byte);
-            if (byte == '*') 
-                exit(EXIT_FAILURE); // @TODO during testing
         }
     }
 }

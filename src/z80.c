@@ -195,24 +195,6 @@ static void cp(struct Z80* z80, uint8_t const val)
     z80->f |= xyflags(val);
 }
 
-static void rlca(struct Z80* z80)
-{
-    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
-    if (z80->a & 0x80)
-        z80->f |= C_FLAG;
-    z80->a = (z80->a << 1) | (z80->f & C_FLAG);
-    z80->f |= xyflags(z80->a);
-}
-
-static void rrca(struct Z80* z80)
-{
-    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
-    if (z80->a & 0x01)
-        z80->f |= C_FLAG;
-    z80->a = (z80->a >> 1) | ((z80->a & C_FLAG) << 7);
-    z80->f |= xyflags(z80->a);
-}
-
 static void push(struct Z80* z80, uint16_t const val)
 {
     writeb(z80, --z80->sp, val >> 8);
@@ -282,6 +264,116 @@ static void ldir(struct Z80* z80)
         z80->pc -= 2;
 }
 
+static uint8_t rl(struct Z80* z80, uint8_t val)
+{
+    // @TODO impl
+    return val;
+}
+
+static uint8_t rr(struct Z80* z80, uint8_t val)
+{
+    // @TODO impl
+    return val;
+}
+
+static uint8_t rrd(struct Z80* z80, uint8_t val)
+{
+    // @TODO impl
+    return val;
+}
+
+static uint8_t rld(struct Z80* z80, uint8_t val)
+{
+    // @TODO impl
+    return val;
+}
+
+static uint8_t rlc(struct Z80* z80, uint8_t val)
+{
+    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
+    if (val & 0x80)
+        z80->f |= C_FLAG;
+    val = (val << 1) | (z80->f & C_FLAG);
+    z80->f |= xyflags(val);
+
+    return val;
+}
+
+static uint8_t rrc(struct Z80* z80, uint8_t val)
+{
+    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
+    if (val & 0x01)
+        z80->f |= C_FLAG;
+    val = (val >> 1) | ((z80->a & C_FLAG) << 7);
+    z80->f |= xyflags(val);
+
+    return val;
+}
+
+
+static void exec_instr(struct Z80* z80, uint8_t const opcode);
+
+static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
+{
+    uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
+    uint16_t const addr = *reg + (int8_t)instrb(z80);
+
+    uint8_t val = readw(z80, addr);
+
+    uint8_t const op = opcode >> 6;
+    uint8_t const type = (opcode >> 3) & 0x7;
+    uint8_t const dest = opcode & 0x07;
+    switch (op)
+    {
+        case 0x00: // rotation
+        {
+            switch (type)
+            {
+                case 0x00: break; // rlc
+                case 0x01: break; // rrc
+                case 0x02: val = rl(z80, val); break; // rl
+                case 0x03: break; // rr
+                case 0x04: break; // sla
+                case 0x05: break; // sra
+                case 0x06: break; // sll
+                case 0x07: break; // srl
+            }
+        }
+        case 0x01: // bit
+        {
+            if (val & (1 << type)) {
+                z80->f &= ~Z_FLAG;
+            } else {
+                z80->f |= Z_FLAG;
+            }
+            break;
+        }
+        case 0x02: // reset
+        {
+            val &= ~(1 << type);
+            break;
+        }
+        case 0x03: // set
+        {
+            val |= (1 << type);
+            break;
+        }
+    }
+
+    if (op != 0x01) {
+        switch (dest) {
+            case 0x00: z80->b = val; break;
+            case 0x01: z80->c = val; break;
+            case 0x02: z80->d = val; break;
+            case 0x03: z80->e = val; break;
+            case 0x04: z80->h = val; break;
+            case 0x05: z80->l = val; break;
+            case 0x06: writeb(z80, addr, val); break;
+            case 0x07: z80->a = val; break;
+        }
+    }
+}
+
 static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
 {
     uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
@@ -291,9 +383,28 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0x09: *reg = addw(z80, *reg, z80->bc); break; // add i*, bc
         case 0x19: *reg = addw(z80, *reg, z80->de); break; // add i*, de
         case 0x21: *reg = instrw(z80); break; // ld i*, nn
+        case 0x22: writew(z80, instrw(z80), *reg); break; // ld (nn), i*
         case 0x23: ++(*reg); break; // inc i*
+        case 0x24: *reg = ((uint16_t)incb(z80, *reg >> 8) << 8) | (*reg & 0xff); break; // inc i*h
+        case 0x25: *reg = ((uint16_t)decb(z80, *reg >> 8) << 8) | (*reg & 0xff); break; // dec i*h
+        case 0x26: *reg = ((uint16_t)instrb(z80) << 8) | (*reg & 0xff); break; // ld ixh, n
         case 0x29: *reg = addw(z80, *reg, *reg); break; // add i*, i*
+        case 0x2a: *reg = readw(z80, instrw(z80)); // ld i*, (nn)
+        case 0x2b: --(*reg); break; // dec ix
+        case 0x2c: *reg = incb(z80, *reg) | (*reg & 0xff00); break; // inc i*l
+        case 0x2d: *reg = decb(z80, *reg) | (*reg & 0xff00); break; // dec i*l
+        case 0x2e: *reg = instrb(z80) | (*reg & 0xff00); break; // ld ixh, n
+        case 0x34: *reg = incb(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // inc (i* + d)
+        case 0x35: *reg = decb(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // dec (i* + d)
+        case 0x36: { int8_t d = instrb(z80); writeb(z80, *reg + d, instrb(z80)); break; } // ld (i* + d), n
         case 0x39: *reg = addw(z80, *reg, z80->sp); break; // add i*, sp
+
+        case 0x46: z80->b = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld b, (i* + d)
+        case 0x4e: z80->c = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld c, (i* + d)
+        case 0x56: z80->d = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld d, (i* + d)
+        case 0x5e: z80->e = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld e, (i* + d)
+        case 0x66: z80->h = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld h, (i* + d)
+        case 0x6e: z80->l = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld l, (i* + d)
         case 0x7e: z80->a = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld a, (i* + d)
         case 0x84: z80->a = addb(z80, z80->a, *reg >> 8, 0); break; // add a, i*h
         case 0x85: z80->a = addb(z80, z80->a, *reg, 0); break; // add a, i*l
@@ -323,11 +434,16 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0xe5: push(z80, *reg); break; // push i*
         case 0xe9: z80->pc = *reg; break; // jp (i*)
 
+        case 0xcb: exec_indexcb_instr(z80, sel, instrb(z80)); break;
+
         default:
-            printf("unimplemented opcode 0x%02x%02x at %x\n", sel, opcode, z80->pc - 1);
-            assert(0);
-            break;
+            exec_instr(z80, opcode);
     }
+}
+
+static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
+{
+    // @TODO impl
 }
 
 static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
@@ -337,11 +453,18 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x47: z80->i = z80->a; break; // ld i, a
 
         case 0x42: z80->hl = subcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // sbc hl, bc
+        case 0x43: writew(z80, instrw(z80), z80->bc); break; // ld (nn), bc
+        case 0x44: z80->a = subb(z80, 0, z80->a, 0); // neg
         case 0x4a: z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // adc hl, bc
+        case 0x4b: z80->bc = readw(z80, instrw(z80)); // ld bc, (nn)
         case 0x52: z80->hl = subcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // sbc hl, de
+        case 0x53: writew(z80, instrw(z80), z80->de); break; // ld (nn), de
         case 0x5a: z80->hl = addcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // adc hl, de
+        case 0x5b: z80->de = readw(z80, instrw(z80)); // ld de, (nn)
         case 0x62: z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // sbc hl, hl
         case 0x6a: z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // adc hl, hl
+        case 0x67: z80->a = rrd(z80, z80->a); break; // rrd
+        case 0x6f: z80->a = rld(z80, z80->a); break; // rrd
         case 0x72: z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // sbc hl, sp
         case 0x7a: z80->hl = addcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // adc hl, sp
 
@@ -349,9 +472,27 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x7b: z80->sp = readw(z80, instrw(z80)); break; // ld sp, (nn)
         case 0xb0: ldir(z80); break; // ldir
 
+        case 0xa0:
+        case 0xa1:
+        case 0xa2:
+        case 0xa3:
+        case 0xa8:
+        case 0xa9:
+        case 0xaa:
+        case 0xab:
+        case 0xb1:
+        case 0xb2:
+        case 0xb3:
+        case 0xb8:
+        case 0xb9:
+        case 0xba:
+        case 0xbb: break; // @TODO impl
+
+
         default:
             printf("unimplemented opcode 0xed%02X at %x\n", opcode, z80->pc - 1);
             assert(0);
+            exit(EXIT_FAILURE);
             break;
     }
 }
@@ -367,7 +508,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x04: z80->b = incb(z80, z80->b); break; // inc b
         case 0x05: z80->b = decb(z80, z80->b); break; // dec b
         case 0x06: z80->b = instrb(z80); break; // ld b, n
-        case 0x07: rlca(z80); break; // rcla
+        case 0x07: z80->a = rlc(z80, z80->a); break; // rcla
         case 0x08: { uint16_t const af = z80->af; z80->af = z80->afp; z80->afp = af; break; } // ex af, af'
         case 0x09: z80->hl = addw(z80, z80->hl, z80->bc); break; // add hl, bc
         case 0x0a: z80->a = readb(z80, z80->bc); break; // ld a, (bc)
@@ -375,7 +516,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x0c: z80->c = incb(z80, z80->c); break; // inc c
         case 0x0d: z80->c = decb(z80, z80->c); break; // dec c
         case 0x0e: z80->c = instrb(z80); break; // ld c, n
-        case 0x0f: rrca(z80); break; // rrca
+        case 0x0f: z80->a = rrc(z80, z80->a); break; // rrca
         case 0x10: --z80->b; jr(z80, z80->b); break; // djnz d
         case 0x11: z80->de = instrw(z80); break; // ld de, nn
         case 0x12: writeb(z80, z80->de, z80->a); break; // ld (de), a
@@ -383,6 +524,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x14: z80->d = incb(z80, z80->d); break; // inc d
         case 0x15: z80->d = decb(z80, z80->d); break; // dec d
         case 0x16: z80->d = instrb(z80); break; // ld d, n
+        case 0x17: z80->a = rl(z80, z80->a); break; // rla
         case 0x18: jr(z80, 1); break; // jr d
         case 0x19: z80->hl = addw(z80, z80->hl, z80->de); break; // add hl, de
         case 0x1a: z80->a = readb(z80, z80->de); break; // ld a, (de)
@@ -390,6 +532,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x1c: z80->e = incb(z80, z80->e); break; // inc e
         case 0x1d: z80->e = decb(z80, z80->e); break; // dec e
         case 0x1e: z80->e = instrb(z80); break; // ld e, n
+        case 0x1f: z80->a = rr(z80, z80->a); break; // rra
         case 0x20: jr(z80, ~z80->f & Z_FLAG); break; // jr nz, d
         case 0x21: z80->hl = instrw(z80); break; // ld hl, nn
         case 0x22: writew(z80, instrw(z80), z80->hl); break; // ld (nn), hl
@@ -397,6 +540,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x24: z80->h = incb(z80, z80->h); break; // inc h
         case 0x25: z80->h = decb(z80, z80->h); break; // dec h
         case 0x26: z80->h = instrb(z80); break; // ld h, n
+        case 0x27: break; // daa @TODO
         case 0x28: jr(z80, z80->f & Z_FLAG); break; // jr z, d
         case 0x29: z80->hl = addw(z80, z80->hl, z80->hl); break; // add hl, hl
         case 0x2a: z80->hl = readw(z80, instrw(z80)); break; // ld hl, (nn)
@@ -404,6 +548,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x2c: z80->l = incb(z80, z80->l); break; // inc l
         case 0x2d: z80->l = decb(z80, z80->l); break; // dec l
         case 0x2e: z80->l = instrb(z80); break; // ld l, n
+        case 0x2f: break; // cpl @TODO
         case 0x30: jr(z80, ~z80->f & C_FLAG); break; // jr nc, d
         case 0x31: z80->sp = instrw(z80); break; // ld sp, nn
         case 0x32: writeb(z80, instrw(z80), z80->a); break; // ld (nn), a
@@ -411,6 +556,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x34: writeb(z80, z80->hl, incb(z80, readb(z80, z80->hl))); break; // inc (hl)
         case 0x35: writeb(z80, z80->hl, decb(z80, readb(z80, z80->hl))); break; // dec (hl)
         case 0x36: writeb(z80, z80->hl, instrb(z80)); break; // ld (hl), n
+        case 0x37: break; // scf @TODO
         case 0x38: jr(z80, z80->f & C_FLAG); break; // jr c, d
         case 0x39: z80->hl = addw(z80, z80->hl, z80->sp); break; // add hl, sp
         case 0x3a: z80->a = readb(z80, instrw(z80)); break; // ld a, (nn)
@@ -418,6 +564,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x3c: z80->a = incb(z80, z80->a); break; // inc a
         case 0x3d: z80->a = decb(z80, z80->a); break; // dec a
         case 0x3e: z80->a = instrb(z80); break; // ld a, n
+        case 0x3f: break; // ccf @TODO
         case 0x40: z80->b = z80->b; break; // ld b, b
         case 0x41: z80->b = z80->c; break; // ld b, c
         case 0x42: z80->b = z80->d; break; // ld b, d
@@ -622,6 +769,9 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
            z80->pc = 0x08 * ((opcode & 0x38) >> 8);
            break;
 
+        case 0xcb:
+           exec_cb_instr(z80, instrb(z80)); break;
+
         case 0xdd:
         case 0xfd:
            exec_index_instr(z80, opcode, instrb(z80)); break; 
@@ -629,6 +779,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         default:
             printf("unimplemented opcode 0x%02x at 0x%04x\n", opcode, z80->pc - 1);
             assert(0);
+            exit(EXIT_FAILURE);
             break;
     }
 }
