@@ -298,6 +298,27 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0x84: z80->a = addb(z80, z80->a, *reg >> 8, 0); break; // add a, i*h
         case 0x85: z80->a = addb(z80, z80->a, *reg, 0); break; // add a, i*l
         case 0x86: z80->a = addb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), 0); break; // add a, (i* + d)
+        case 0x8c: z80->a = addb(z80, z80->a, *reg >> 8, z80->f & C_FLAG); break; // adc a, i*h
+        case 0x8d: z80->a = addb(z80, z80->a, *reg, z80->f & C_FLAG); break; // adc a, i*l
+        case 0x8e: z80->a = addb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), z80->f & C_FLAG); break; // adc a, (i* + d)
+        case 0x94: z80->a = subb(z80, z80->a, *reg >> 8, 0); break; // sub a, i*h
+        case 0x95: z80->a = subb(z80, z80->a, *reg, 0); break; // sub a, i*l
+        case 0x96: z80->a = subb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), 0); break; // sub a, (i* + d)
+        case 0x9c: z80->a = subb(z80, z80->a, *reg >> 8, z80->f & C_FLAG); break; // sbc a, i*h
+        case 0x9d: z80->a = subb(z80, z80->a, *reg, z80->f & C_FLAG); break; // sbc a, i*l
+        case 0x9e: z80->a = subb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), z80->f & C_FLAG); break; // sbc a, (i* + d)
+        case 0xa4: and(z80, *reg >> 8); break; // and i*h
+        case 0xa5: and(z80, *reg); break; // and i*l
+        case 0xa6: and(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // and (ix + d)
+        case 0xac: xor(z80, *reg >> 8); break; // xor i*h
+        case 0xad: xor(z80, *reg); break; // xor i*l
+        case 0xae: xor(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // xor (ix + d)
+        case 0xb4: or(z80, *reg >> 8); break; // or i*h
+        case 0xb5: or(z80, *reg); break; // or i*l
+        case 0xb6: or(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // or (ix + d)
+        case 0xbc: cp(z80, *reg >> 8); break; // cp i*h
+        case 0xbd: cp(z80, *reg); break; // cp i*l
+        case 0xbe: cp(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // cp (ix + d)
         case 0xe1: *reg = pop(z80); break; // pop i*
         case 0xe5: push(z80, *reg); break; // push i*
         case 0xe9: z80->pc = *reg; break; // jp (i*)
@@ -462,6 +483,37 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x7e: z80->a = readb(z80, z80->hl); break; // ld a, (hl)
         case 0x7f: z80->a = z80->a; break; // ld a, a
         case 0x80: z80->a = addb(z80, z80->a, z80->b, 0); break; // add a, b
+        case 0x81: z80->a = addb(z80, z80->a, z80->c, 0); break; // add a, c
+        case 0x82: z80->a = addb(z80, z80->a, z80->d, 0); break; // add a, d
+        case 0x83: z80->a = addb(z80, z80->a, z80->e, 0); break; // add a, e
+        case 0x84: z80->a = addb(z80, z80->a, z80->h, 0); break; // add a, h
+        case 0x85: z80->a = addb(z80, z80->a, z80->l, 0); break; // add a, l
+        case 0x86: z80->a = addb(z80, z80->a, readb(z80, z80->hl), 0); break; // add a, (hl)
+        case 0x87: z80->a = addb(z80, z80->a, z80->a, 0); break; // add a, a
+        case 0x88: z80->a = addb(z80, z80->a, z80->b, z80->f & C_FLAG); break; // adc a, b
+        case 0x89: z80->a = addb(z80, z80->a, z80->c, z80->f & C_FLAG); break; // adc a, c
+        case 0x8a: z80->a = addb(z80, z80->a, z80->d, z80->f & C_FLAG); break; // adc a, d
+        case 0x8b: z80->a = addb(z80, z80->a, z80->e, z80->f & C_FLAG); break; // adc a, e
+        case 0x8c: z80->a = addb(z80, z80->a, z80->h, z80->f & C_FLAG); break; // adc a, h
+        case 0x8d: z80->a = addb(z80, z80->a, z80->l, z80->f & C_FLAG); break; // adc a, l
+        case 0x8e: z80->a = addb(z80, z80->a, readb(z80, z80->hl), z80->f & C_FLAG); break; // adc a, (hl)
+        case 0x8f: z80->a = addb(z80, z80->a, z80->a, z80->f & C_FLAG); break; // adc a, a
+        case 0x90: z80->a = subb(z80, z80->a, z80->b, 0); break; // sub a, b
+        case 0x91: z80->a = subb(z80, z80->a, z80->c, 0); break; // sub a, c
+        case 0x92: z80->a = subb(z80, z80->a, z80->d, 0); break; // sub a, d
+        case 0x93: z80->a = subb(z80, z80->a, z80->e, 0); break; // sub a, e
+        case 0x94: z80->a = subb(z80, z80->a, z80->h, 0); break; // sub a, h
+        case 0x95: z80->a = subb(z80, z80->a, z80->l, 0); break; // sub a, l
+        case 0x96: z80->a = subb(z80, z80->a, readb(z80, z80->hl), 0); break; // sub a, (hl)
+        case 0x97: z80->a = subb(z80, z80->a, z80->a, 0); break; // sub a, a
+        case 0x98: z80->a = subb(z80, z80->a, z80->b, z80->f & C_FLAG); break; // sbc a, b
+        case 0x99: z80->a = subb(z80, z80->a, z80->c, z80->f & C_FLAG); break; // sbc a, c
+        case 0x9a: z80->a = subb(z80, z80->a, z80->d, z80->f & C_FLAG); break; // sbc a, d
+        case 0x9b: z80->a = subb(z80, z80->a, z80->e, z80->f & C_FLAG); break; // sbc a, e
+        case 0x9c: z80->a = subb(z80, z80->a, z80->h, z80->f & C_FLAG); break; // sbc a, h
+        case 0x9d: z80->a = subb(z80, z80->a, z80->l, z80->f & C_FLAG); break; // sbc a, l
+        case 0x9e: z80->a = subb(z80, z80->a, readb(z80, z80->hl), z80->f & C_FLAG); break; // sbc a, (hl)
+        case 0x9f: z80->a = subb(z80, z80->a, z80->a, z80->f & C_FLAG); break; // sbc a, a
         case 0xa0: and(z80, z80->b); break; // and b
         case 0xa1: and(z80, z80->c); break; // and c
         case 0xa2: and(z80, z80->d); break; // and d
@@ -506,12 +558,14 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xca: jp(z80, z80->f & Z_FLAG); break;  // jp z, nn
         case 0xcc: call(z80, z80->f & Z_FLAG); break; // call z, nn
         case 0xcd: call(z80, 1); break; // call nn
+        case 0xce: z80->a = addb(z80, z80->a, instrb(z80), z80->f & C_FLAG); break; // adc a, n
         case 0xd0: if (~z80->f & C_FLAG) z80->pc = pop(z80); break; // ret nc
         case 0xd1: z80->de = pop(z80); break; // pop de
         case 0xd2: jp(z80, ~z80->f & C_FLAG); break;  // jp nc, nn
         case 0xd3: out(z80, instrb(z80), z80->a); break; // out (n), a
         case 0xd4: call(z80, ~z80->f & C_FLAG); break; // call nc, nn
         case 0xd5: push(z80, z80->de); break; // push de
+        case 0xd6: z80->a = subb(z80, z80->a, instrb(z80), 0); break; // adc a, n
         case 0xd8: if (z80->f & C_FLAG) z80->pc = pop(z80); break; // ret c
         case 0xd9: {
             uint16_t const bc = z80->bc;
@@ -528,6 +582,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xda: jp(z80, z80->f & C_FLAG); break;  // jp c, nn
         case 0xdb: z80->a = in(z80, instrb(z80)); break; // in a, (n)
         case 0xdc: call(z80, z80->f & C_FLAG); break; // call c, nn
+        case 0xde: z80->a = subb(z80, z80->a, instrb(z80), z80->f & C_FLAG); break; // sbc a, n
         case 0xe0: if (~z80->f & P_FLAG) z80->pc = pop(z80); break; // ret po
         case 0xe1: z80->hl = pop(z80); break; // pop hl
         case 0xe2: jp(z80, ~z80->f & P_FLAG); break;  // jp po, nn
@@ -540,12 +595,14 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xeb: { uint16_t de = z80->de; z80->de = z80->hl; z80->hl = de; break; } // ex de, hl
         case 0xec: call(z80, z80->f & P_FLAG); break; // call pe, nn
         case 0xed: exec_ed_instr(z80, instrb(z80)); break;
+        case 0xee: xor(z80, instrb(z80)); break; // xor n
         case 0xf0: if (~z80->f & S_FLAG) z80->pc = pop(z80); break; // ret p
         case 0xf1: z80->af = pop(z80); break; // pop af
         case 0xf2: jp(z80, ~z80->f & S_FLAG); break;  // jp p, nn
         case 0xf3: z80->iff = 0; break; // di 
         case 0xf4: call(z80, ~z80->f & S_FLAG); break; // call p, nn
         case 0xf5: push(z80, z80->af); break; // push af
+        case 0xf6: or(z80, instrb(z80)); break; // or n
         case 0xf8: if (z80->f & S_FLAG) z80->pc = pop(z80); break; // ret m
         case 0xf9: z80->sp = z80->hl; break; // ld sp, hl
         case 0xfa: jp(z80, z80->f & S_FLAG); break;  // jp m, nn
