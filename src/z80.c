@@ -40,6 +40,13 @@ static uint8_t instrb(struct Z80* z80)
     return readb(z80, z80->pc++);
 }
 
+/** Reads a displacement byte from the current instruction.
+ * */
+static int8_t dispb(struct Z80* z80)
+{
+    return (int8_t)readb(z80, z80->pc++);
+}
+
 static uint16_t instrw(struct Z80* z80)
 {
     return instrb(z80) + (instrb(z80) << 8);
@@ -242,6 +249,21 @@ static void out(struct Z80* z80, uint8_t const port, uint8_t const val)
     z80->port_store(z80, port, val);
 }
 
+static void ldd(struct Z80* z80)
+{
+    uint8_t const byte = readb(z80, z80->hl);
+    uint8_t const result = z80->a + byte;
+    writeb(z80, z80->de, byte);
+    --z80->de;
+    --z80->hl;
+    --z80->bc;
+
+    z80->f &= ~(X_FLAG | H_FLAG | Y_FLAG | P_FLAG | N_FLAG);
+    z80->f |= ((result & 0x02) << 4) | result & 0x08;
+    if (z80->bc > 0)
+        z80->f |= P_FLAG;
+}
+
 static void ldi(struct Z80* z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
@@ -255,6 +277,13 @@ static void ldi(struct Z80* z80)
     z80->f |= ((result & 0x02) << 4) | result & 0x08;
     if (z80->bc > 0)
         z80->f |= P_FLAG;
+}
+
+static void lddr(struct Z80* z80)
+{
+    ldd(z80);
+    if (z80->f & P_FLAG)
+        z80->pc -= 2;
 }
 
 static void ldir(struct Z80* z80)
@@ -377,6 +406,8 @@ static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel, uint8_t const
 static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
 {
     uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
+    uint8_t* l = (uint8_t*)reg;
+    uint8_t* h = l + 1;
 
     switch (opcode)
     {
@@ -385,51 +416,88 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0x21: *reg = instrw(z80); break; // ld i*, nn
         case 0x22: writew(z80, instrw(z80), *reg); break; // ld (nn), i*
         case 0x23: ++(*reg); break; // inc i*
-        case 0x24: *reg = ((uint16_t)incb(z80, *reg >> 8) << 8) | (*reg & 0xff); break; // inc i*h
-        case 0x25: *reg = ((uint16_t)decb(z80, *reg >> 8) << 8) | (*reg & 0xff); break; // dec i*h
-        case 0x26: *reg = ((uint16_t)instrb(z80) << 8) | (*reg & 0xff); break; // ld ixh, n
+        case 0x24: *h = incb(z80, *h); break; // inc i*h
+        case 0x25: *h = decb(z80, *h); break; // dec i*h
+        case 0x26: *h = instrb(z80); break; // ld i*h, n
         case 0x29: *reg = addw(z80, *reg, *reg); break; // add i*, i*
-        case 0x2a: *reg = readw(z80, instrw(z80)); // ld i*, (nn)
+        case 0x2a: *reg = readw(z80, instrw(z80)); break; // ld i*, (nn)
         case 0x2b: --(*reg); break; // dec ix
-        case 0x2c: *reg = incb(z80, *reg) | (*reg & 0xff00); break; // inc i*l
-        case 0x2d: *reg = decb(z80, *reg) | (*reg & 0xff00); break; // dec i*l
-        case 0x2e: *reg = instrb(z80) | (*reg & 0xff00); break; // ld ixh, n
-        case 0x34: *reg = incb(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // inc (i* + d)
-        case 0x35: *reg = decb(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // dec (i* + d)
-        case 0x36: { int8_t d = instrb(z80); writeb(z80, *reg + d, instrb(z80)); break; } // ld (i* + d), n
+        case 0x2c: *l = incb(z80, *l); break; // inc i*l
+        case 0x2d: *l = decb(z80, *l); break; // dec i*l
+        case 0x2e: *l = instrb(z80); break; // ld i*l, n
+        case 0x34: { // inc (i* + d)
+            uint16_t addr = *reg + dispb(z80);
+            writeb(z80, addr, incb(z80, readw(z80, addr)));
+            break;
+        }
+        case 0x35: { // dec (i* + d)
+            uint16_t addr = *reg + dispb(z80);
+            writeb(z80, addr, decb(z80, readw(z80, addr)));
+            break;
+        }
+        case 0x36: { int8_t d = dispb(z80); writeb(z80, *reg + d, instrb(z80)); break; } // ld (i* + d), n
         case 0x39: *reg = addw(z80, *reg, z80->sp); break; // add i*, sp
 
-        case 0x46: z80->b = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld b, (i* + d)
-        case 0x4e: z80->c = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld c, (i* + d)
-        case 0x56: z80->d = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld d, (i* + d)
-        case 0x5e: z80->e = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld e, (i* + d)
-        case 0x66: z80->h = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld h, (i* + d)
-        case 0x6e: z80->l = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld l, (i* + d)
-        case 0x7e: z80->a = readw(z80, *reg + (int8_t)instrb(z80)); break; // ld a, (i* + d)
+        case 0x44: z80->b = *reg >> 8; break; // ld b, i*h
+        case 0x45: z80->b = *reg & 0xff; break; // ld b, i*l
+        case 0x46: z80->b = readw(z80, *reg + dispb(z80)); break; // ld b, (i* + d)
+        case 0x4c: z80->c = *reg >> 8; break; // ld c, i*h
+        case 0x4d: z80->c = *reg & 0xff; break; // ld c, i*l
+        case 0x4e: z80->c = readw(z80, *reg + dispb(z80)); break; // ld c, (i* + d)
+        case 0x54: z80->d = *reg >> 8; break; // ld d, i*h
+        case 0x55: z80->d = *reg & 0xff; break; // ld d, i*l
+        case 0x56: z80->d = readw(z80, *reg + dispb(z80)); break; // ld d, (i* + d)
+        case 0x5c: z80->e = *reg >> 8; break; // ld e, i*h
+        case 0x5d: z80->e = *reg & 0xff; break; // ld e, i*l
+        case 0x5e: z80->e = readw(z80, *reg + dispb(z80)); break; // ld e, (i* + d)
+        case 0x60: *h = z80->b; break; // ld i*h, b
+        case 0x61: *h = z80->c; break; // ld i*h, c
+        case 0x62: *h = z80->d; break; // ld i*h, d
+        case 0x63: *h = z80->e; break; // ld i*h, e
+        case 0x64: *h = *h; break; // ld i*h, i*h
+        case 0x65: *h = *l; break; // ld i*h, i*l
+        case 0x66: z80->h = readw(z80, *reg + dispb(z80)); break; // ld h, (i* + d)
+        case 0x67: *h = z80->a; break; // ld i*h, a
+        case 0x68: *l = z80->b; break; // ld i*l, b
+        case 0x69: *l = z80->c; break; // ld i*l, c
+        case 0x6a: *l = z80->d; break; // ld i*l, d
+        case 0x6b: *l = z80->e; break; // ld i*l, e
+        case 0x6c: *l = *h; break; // ld i*l, i*l
+        case 0x6d: *l = *l; break; // ld i*l, i*l
+        case 0x6e: z80->l = readw(z80, *reg + dispb(z80)); break; // ld l, (i* + d)
+        case 0x6f: *l = z80->a; break; // ld i*l, a
+        case 0x70: writeb(z80, *reg + dispb(z80), z80->b); break; // ld (i* + d), b
+        case 0x71: writeb(z80, *reg + dispb(z80), z80->c); break; // ld (i* + d), c
+        case 0x72: writeb(z80, *reg + dispb(z80), z80->d); break; // ld (i* + d), d
+        case 0x73: writeb(z80, *reg + dispb(z80), z80->e); break; // ld (i* + d), e
+        case 0x74: writeb(z80, *reg + dispb(z80), z80->h); break; // ld (i* + d), h
+        case 0x75: writeb(z80, *reg + dispb(z80), z80->l); break; // ld (i* + d), l
+        case 0x77: writeb(z80, *reg + dispb(z80), z80->a); break; // ld (i* + d), a
+        case 0x7e: z80->a = readw(z80, *reg + dispb(z80)); break; // ld a, (i* + d)
         case 0x84: z80->a = addb(z80, z80->a, *reg >> 8, 0); break; // add a, i*h
         case 0x85: z80->a = addb(z80, z80->a, *reg, 0); break; // add a, i*l
-        case 0x86: z80->a = addb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), 0); break; // add a, (i* + d)
+        case 0x86: z80->a = addb(z80, z80->a, readw(z80, *reg + dispb(z80)), 0); break; // add a, (i* + d)
         case 0x8c: z80->a = addb(z80, z80->a, *reg >> 8, z80->f & C_FLAG); break; // adc a, i*h
         case 0x8d: z80->a = addb(z80, z80->a, *reg, z80->f & C_FLAG); break; // adc a, i*l
-        case 0x8e: z80->a = addb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), z80->f & C_FLAG); break; // adc a, (i* + d)
+        case 0x8e: z80->a = addb(z80, z80->a, readw(z80, *reg + dispb(z80)), z80->f & C_FLAG); break; // adc a, (i* + d)
         case 0x94: z80->a = subb(z80, z80->a, *reg >> 8, 0); break; // sub a, i*h
         case 0x95: z80->a = subb(z80, z80->a, *reg, 0); break; // sub a, i*l
-        case 0x96: z80->a = subb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), 0); break; // sub a, (i* + d)
+        case 0x96: z80->a = subb(z80, z80->a, readw(z80, *reg + dispb(z80)), 0); break; // sub a, (i* + d)
         case 0x9c: z80->a = subb(z80, z80->a, *reg >> 8, z80->f & C_FLAG); break; // sbc a, i*h
         case 0x9d: z80->a = subb(z80, z80->a, *reg, z80->f & C_FLAG); break; // sbc a, i*l
-        case 0x9e: z80->a = subb(z80, z80->a, readw(z80, *reg + (int8_t)instrb(z80)), z80->f & C_FLAG); break; // sbc a, (i* + d)
+        case 0x9e: z80->a = subb(z80, z80->a, readw(z80, *reg + dispb(z80)), z80->f & C_FLAG); break; // sbc a, (i* + d)
         case 0xa4: and(z80, *reg >> 8); break; // and i*h
         case 0xa5: and(z80, *reg); break; // and i*l
-        case 0xa6: and(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // and (ix + d)
+        case 0xa6: and(z80, readw(z80, *reg + dispb(z80))); break; // and (ix + d)
         case 0xac: xor(z80, *reg >> 8); break; // xor i*h
         case 0xad: xor(z80, *reg); break; // xor i*l
-        case 0xae: xor(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // xor (ix + d)
+        case 0xae: xor(z80, readw(z80, *reg + dispb(z80))); break; // xor (ix + d)
         case 0xb4: or(z80, *reg >> 8); break; // or i*h
         case 0xb5: or(z80, *reg); break; // or i*l
-        case 0xb6: or(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // or (ix + d)
+        case 0xb6: or(z80, readw(z80, *reg + dispb(z80))); break; // or (ix + d)
         case 0xbc: cp(z80, *reg >> 8); break; // cp i*h
         case 0xbd: cp(z80, *reg); break; // cp i*l
-        case 0xbe: cp(z80, readw(z80, *reg + (int8_t)instrb(z80))); break; // cp (ix + d)
+        case 0xbe: cp(z80, readw(z80, *reg + dispb(z80))); break; // cp (ix + d)
         case 0xe1: *reg = pop(z80); break; // pop i*
         case 0xe5: push(z80, *reg); break; // push i*
         case 0xe9: z80->pc = *reg; break; // jp (i*)
@@ -454,13 +522,13 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
 
         case 0x42: z80->hl = subcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // sbc hl, bc
         case 0x43: writew(z80, instrw(z80), z80->bc); break; // ld (nn), bc
-        case 0x44: z80->a = subb(z80, 0, z80->a, 0); // neg
+        case 0x44: z80->a = subb(z80, 0, z80->a, 0); break; // neg
         case 0x4a: z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // adc hl, bc
-        case 0x4b: z80->bc = readw(z80, instrw(z80)); // ld bc, (nn)
+        case 0x4b: z80->bc = readw(z80, instrw(z80)); break; // ld bc, (nn)
         case 0x52: z80->hl = subcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // sbc hl, de
         case 0x53: writew(z80, instrw(z80), z80->de); break; // ld (nn), de
         case 0x5a: z80->hl = addcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // adc hl, de
-        case 0x5b: z80->de = readw(z80, instrw(z80)); // ld de, (nn)
+        case 0x5b: z80->de = readw(z80, instrw(z80)); break; // ld de, (nn)
         case 0x62: z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // sbc hl, hl
         case 0x6a: z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // adc hl, hl
         case 0x67: z80->a = rrd(z80, z80->a); break; // rrd
@@ -470,20 +538,20 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
 
         case 0x73: writew(z80, instrw(z80), z80->sp); break; // ld (nn), sp
         case 0x7b: z80->sp = readw(z80, instrw(z80)); break; // ld sp, (nn)
+        case 0xa0: ldi(z80); break; // ldi
+        case 0xa8: ldd(z80); break; // ldd
         case 0xb0: ldir(z80); break; // ldir
+        case 0xb8: lddr(z80); break; // lddr
 
-        case 0xa0:
         case 0xa1:
         case 0xa2:
         case 0xa3:
-        case 0xa8:
         case 0xa9:
         case 0xaa:
         case 0xab:
         case 0xb1:
         case 0xb2:
         case 0xb3:
-        case 0xb8:
         case 0xb9:
         case 0xba:
         case 0xbb: break; // @TODO impl
