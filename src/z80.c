@@ -436,10 +436,11 @@ static void rld(struct Z80* z80)
 
 static void exec_instr(struct Z80* z80, uint8_t const opcode);
 
-static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
+static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
 {
     uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
     uint16_t const addr = *reg + (int8_t)instrb(z80);
+    uint8_t const opcode = instrb(z80);
 
     uint8_t val = readw(z80, addr);
 
@@ -597,7 +598,7 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0xe5: push(z80, *reg); break; // push i*
         case 0xe9: z80->pc = *reg; break; // jp (i*)
 
-        case 0xcb: exec_indexcb_instr(z80, sel, instrb(z80)); break;
+        case 0xcb: exec_indexcb_instr(z80, sel); break;
 
         default:
             exec_instr(z80, opcode);
