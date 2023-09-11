@@ -466,10 +466,10 @@ static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
         }
         case 0x01: // bit
         {
-            if (val & (1 << type)) {
-                z80->f &= ~Z_FLAG;
-            } else {
-                z80->f |= Z_FLAG;
+            val = val & (1 << type);
+            z80->f = szflags(val) | xyflags(val) | H_FLAG | (z80->f & C_FLAG);
+            if (z80->f & Z_FLAG) {
+                z80->f |= P_FLAG;
             }
             break;
         }
@@ -643,10 +643,10 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
         }
         case 0x01: // bit
         {
-            if (val & (1 << type)) {
-                z80->f &= ~Z_FLAG;
-            } else {
-                z80->f |= Z_FLAG;
+            val = val & (1 << type);
+            z80->f = szflags(val) | xyflags(val) | H_FLAG | (z80->f & C_FLAG);
+            if (z80->f & Z_FLAG) {
+                z80->f |= P_FLAG;
             }
             break;
         }
