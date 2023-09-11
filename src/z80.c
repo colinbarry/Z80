@@ -57,11 +57,6 @@ static uint8_t szflags(uint8_t const val)
     return val ? (val & S_FLAG) : Z_FLAG;
 }
 
-static uint8_t szflags16(uint16_t const val)
-{
-    return val ? ((val >> 8) & S_FLAG) : Z_FLAG;
-}
-
 static uint8_t xyflags(uint8_t const val)
 {
     return val & (X_FLAG | Y_FLAG);
@@ -89,7 +84,6 @@ static uint8_t halfcarry(uint8_t const a, uint8_t const b, uint8_t c)
         ? H_FLAG
         : 0;
 }
-
 
 static uint8_t addb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
 {
@@ -133,7 +127,6 @@ static uint16_t addcw(struct Z80* z80,
 
     return result;
 }
-
 
 static uint8_t subb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
 {
@@ -293,15 +286,79 @@ static void ldir(struct Z80* z80)
         z80->pc -= 2;
 }
 
+static uint8_t rlc(struct Z80* z80, uint8_t val)
+{
+    z80->f = 0;
+    if (val & 0x80)
+        z80->f |= C_FLAG;
+    val = (val << 1) | (z80->f & C_FLAG);
+    z80->f |= xyflags(val) | parity(val) | szflags(val);
+
+    return val;
+}
+
+static uint8_t rrc(struct Z80* z80, uint8_t val)
+{
+    z80->f = 0;
+    if (val & 0x01)
+        z80->f |= C_FLAG;
+    val = (val >> 1) | ((z80->f & C_FLAG) << 7);
+    z80->f |= xyflags(val) | parity(val) | szflags(val);
+
+    return val;
+}
+
 static uint8_t rl(struct Z80* z80, uint8_t val)
 {
-    // @TODO impl
+    uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
+    val = (val << 1) | (z80->f & C_FLAG);
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
     return val;
 }
 
 static uint8_t rr(struct Z80* z80, uint8_t val)
 {
-    // @TODO impl
+    uint8_t carry = val & 0x01;
+    val = (val >> 1) | ((z80->f & C_FLAG) << 7);
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
+    return val;
+}
+
+static uint8_t sla(struct Z80* z80, uint8_t val)
+{
+    uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
+    val = val << 1;
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
+    return val;
+}
+
+static uint8_t sra(struct Z80* z80, uint8_t val)
+{
+    uint8_t carry = val & 0x01;
+    val = (val >> 1) | (val & 0x80);
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
+    return val;
+}
+
+static uint8_t sll(struct Z80* z80, uint8_t val)
+{
+    uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
+    val = (val << 1) | 0x01;
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
+    return val;
+}
+
+static uint8_t srl(struct Z80* z80, uint8_t val)
+{
+    uint8_t carry = val & 0x01;
+    val = (val >> 1);
+    z80->f = xyflags(val) | parity(val) | szflags(val) | carry;
+
     return val;
 }
 
@@ -331,29 +388,6 @@ static void rld(struct Z80* z80)
     z80->f = szflags(z80->a) | xyflags(z80->a) | (z80->f & C_FLAG) | parity(z80->a);
 }
 
-static uint8_t rlc(struct Z80* z80, uint8_t val)
-{
-    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
-    if (val & 0x80)
-        z80->f |= C_FLAG;
-    val = (val << 1) | (z80->f & C_FLAG);
-    z80->f |= xyflags(val);
-
-    return val;
-}
-
-static uint8_t rrc(struct Z80* z80, uint8_t val)
-{
-    z80->f &= ~(H_FLAG | N_FLAG | C_FLAG | X_FLAG | Y_FLAG);
-    if (val & 0x01)
-        z80->f |= C_FLAG;
-    val = (val >> 1) | ((z80->a & C_FLAG) << 7);
-    z80->f |= xyflags(val);
-
-    return val;
-}
-
-
 static void exec_instr(struct Z80* z80, uint8_t const opcode);
 
 static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
@@ -372,15 +406,16 @@ static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel, uint8_t const
         {
             switch (type)
             {
-                case 0x00: break; // rlc
-                case 0x01: break; // rrc
+                case 0x00: val = rlc(z80, val); break; // rlc
+                case 0x01: val = rrc(z80, val); break; // rrc
                 case 0x02: val = rl(z80, val); break; // rl
-                case 0x03: break; // rr
-                case 0x04: break; // sla
-                case 0x05: break; // sra
-                case 0x06: break; // sll
-                case 0x07: break; // srl
+                case 0x03: val = rr(z80, val); break; // rr
+                case 0x04: val = sla(z80, val); break; // sla
+                case 0x05: val = sra(z80, val); break; // sra
+                case 0x06: val = sll(z80, val); break; // sll
+                case 0x07: val = srl(z80, val); break; // srl
             }
+            break;
         }
         case 0x01: // bit
         {
@@ -525,7 +560,73 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
 
 static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
 {
-    // @TODO impl
+    uint8_t const op = opcode >> 6;
+    uint8_t const type = (opcode >> 3) & 0x7;
+    uint8_t const dest = opcode & 0x07;
+    uint8_t val;
+
+    switch (dest)
+    {
+        case 0x00: val = z80->b; break;
+        case 0x01: val = z80->c; break;
+        case 0x02: val = z80->d; break;
+        case 0x03: val = z80->e; break;
+        case 0x04: val = z80->h; break;
+        case 0x05: val = z80->l; break;
+        case 0x06: val = readb(z80, z80->hl); break;
+        case 0x07: val = z80->a; break;
+    }
+
+    switch (op)
+    {
+        case 0x00: // rotation
+        {
+            switch (type)
+            {
+                case 0x00: val = rlc(z80, val); break; // rlc
+                case 0x01: val = rrc(z80, val); break; // rrc
+                case 0x02: val = rl(z80, val); break; // rl
+                case 0x03: val = rr(z80, val); break; // rr
+                case 0x04: val = sla(z80, val); break; // sla
+                case 0x05: val = sra(z80, val); break; // sra
+                case 0x06: val = sll(z80, val); break; // sll
+                case 0x07: val = srl(z80, val); break; // srl
+            }
+            break;
+        }
+        case 0x01: // bit
+        {
+            if (val & (1 << type)) {
+                z80->f &= ~Z_FLAG;
+            } else {
+                z80->f |= Z_FLAG;
+            }
+            break;
+        }
+        case 0x02: // reset
+        {
+            val &= ~(1 << type);
+            break;
+        }
+        case 0x03: // set
+        {
+            val |= (1 << type);
+            break;
+        }
+    }
+
+    if (op != 0x01) {
+        switch (dest) {
+            case 0x00: z80->b = val; break;
+            case 0x01: z80->c = val; break;
+            case 0x02: z80->d = val; break;
+            case 0x03: z80->e = val; break;
+            case 0x04: z80->h = val; break;
+            case 0x05: z80->l = val; break;
+            case 0x06: writeb(z80, z80->hl, val); break;
+            case 0x07: z80->a = val; break;
+        }
+    }
 }
 
 static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
