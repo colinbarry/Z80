@@ -286,6 +286,52 @@ static void ldir(struct Z80* z80)
         z80->pc -= 2;
 }
 
+static void cpd(struct Z80* z80)
+{
+    uint8_t const flags = z80->f;
+    uint8_t const val = readb(z80, z80->hl);
+    uint8_t const result = subb(z80, z80->a, val, 0);
+
+    --z80->hl;
+    --z80->bc;
+
+    z80->f &= ~(P_FLAG | C_FLAG);
+    z80->f |= (flags & C_FLAG);
+
+    if (z80->bc > 0)
+        z80->f |= P_FLAG;
+}
+
+static void cpdr(struct Z80* z80)
+{
+    cpd(z80);
+    if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
+        z80->pc -= 2;
+}
+
+static void cpi(struct Z80* z80)
+{
+    uint8_t const flags = z80->f;
+    uint8_t const val = readb(z80, z80->hl);
+    uint8_t const result = subb(z80, z80->a, val, 0);
+
+    ++z80->hl;
+    --z80->bc;
+
+    z80->f &= ~(P_FLAG | C_FLAG);
+    z80->f |= (flags & C_FLAG);
+
+    if (z80->bc > 0)
+        z80->f |= P_FLAG;
+}
+
+static void cpir(struct Z80* z80)
+{
+    cpi(z80);
+    if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
+        z80->pc -= 2;
+}
+
 static uint8_t rlc(struct Z80* z80, uint8_t val)
 {
     z80->f = 0;
@@ -654,20 +700,20 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x73: writew(z80, instrw(z80), z80->sp); break; // ld (nn), sp
         case 0x7b: z80->sp = readw(z80, instrw(z80)); break; // ld sp, (nn)
         case 0xa0: ldi(z80); break; // ldi
+        case 0xa1: cpi(z80); break; // cpi
         case 0xa8: ldd(z80); break; // ldd
+        case 0xa9: cpd(z80); break; // cpd
         case 0xb0: ldir(z80); break; // ldir
+        case 0xb1: cpir(z80); break; // cpir
         case 0xb8: lddr(z80); break; // lddr
+        case 0xb9: cpdr(z80); break; // cpdr
 
-        case 0xa1:
         case 0xa2:
         case 0xa3:
-        case 0xa9:
         case 0xaa:
         case 0xab:
-        case 0xb1:
         case 0xb2:
         case 0xb3:
-        case 0xb9:
         case 0xba:
         case 0xbb: break; // @TODO impl
 
