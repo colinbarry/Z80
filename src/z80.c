@@ -305,16 +305,30 @@ static uint8_t rr(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static uint8_t rrd(struct Z80* z80, uint8_t val)
+static void rrd(struct Z80* z80)
 {
-    // @TODO impl
-    return val;
+    uint8_t const val = readb(z80, z80->hl);
+    uint8_t const memh = (val & 0xf0) >> 4;
+    uint8_t const meml = val & 0xf;
+    uint8_t const al = z80->a & 0xf;
+
+    writeb(z80, z80->hl, (al << 4) | memh);
+    z80->a = (z80->a & 0xf0) | meml;
+
+    z80->f = szflags(z80->a) | xyflags(z80->a) | (z80->f & C_FLAG) | parity(z80->a);
 }
 
-static uint8_t rld(struct Z80* z80, uint8_t val)
+static void rld(struct Z80* z80)
 {
-    // @TODO impl
-    return val;
+    uint8_t const val = readb(z80, z80->hl);
+    uint8_t const memh = (val & 0xf0) >> 4;
+    uint8_t const meml = val & 0xf;
+    uint8_t const al = z80->a & 0xf;
+
+    writeb(z80, z80->hl, (meml << 4) | al);
+    z80->a = (z80->a & 0xf0) | memh;
+
+    z80->f = szflags(z80->a) | xyflags(z80->a) | (z80->f & C_FLAG) | parity(z80->a);
 }
 
 static uint8_t rlc(struct Z80* z80, uint8_t val)
@@ -531,8 +545,8 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x5b: z80->de = readw(z80, instrw(z80)); break; // ld de, (nn)
         case 0x62: z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // sbc hl, hl
         case 0x6a: z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // adc hl, hl
-        case 0x67: z80->a = rrd(z80, z80->a); break; // rrd
-        case 0x6f: z80->a = rld(z80, z80->a); break; // rrd
+        case 0x67: rrd(z80); break; // rrd
+        case 0x6f: rld(z80); break; // rld
         case 0x72: z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // sbc hl, sp
         case 0x7a: z80->hl = addcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // adc hl, sp
 
