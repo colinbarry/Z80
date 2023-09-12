@@ -290,16 +290,22 @@ static void cpd(struct Z80* z80)
 {
     uint8_t const flags = z80->f;
     uint8_t const val = readb(z80, z80->hl);
-    uint8_t const result = subb(z80, z80->a, val, 0);
+    uint8_t result = subb(z80, z80->a, val, 0);
+    if (z80->f & H_FLAG)
+        --result;
 
     --z80->hl;
     --z80->bc;
 
-    z80->f &= ~(P_FLAG | C_FLAG);
+    z80->f &= ~(P_FLAG | C_FLAG | X_FLAG | Y_FLAG);
     z80->f |= (flags & C_FLAG);
 
     if (z80->bc > 0)
         z80->f |= P_FLAG;
+
+    z80->f |= (result & Y_FLAG);
+    if (result & 0x02)
+        z80->f |= X_FLAG;
 }
 
 static void cpdr(struct Z80* z80)
@@ -313,16 +319,22 @@ static void cpi(struct Z80* z80)
 {
     uint8_t const flags = z80->f;
     uint8_t const val = readb(z80, z80->hl);
-    uint8_t const result = subb(z80, z80->a, val, 0);
+    uint8_t result = subb(z80, z80->a, val, 0);
+    if (z80->f & H_FLAG)
+        --result;
 
     ++z80->hl;
     --z80->bc;
 
-    z80->f &= ~(P_FLAG | C_FLAG);
+    z80->f &= ~(P_FLAG | C_FLAG | X_FLAG | Y_FLAG);
     z80->f |= (flags & C_FLAG);
 
     if (z80->bc > 0)
         z80->f |= P_FLAG;
+
+    z80->f |= (result & Y_FLAG);
+    if (result & 0x02)
+        z80->f |= X_FLAG;
 }
 
 static void cpir(struct Z80* z80)
