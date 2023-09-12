@@ -500,8 +500,9 @@ static void daa(struct Z80* z80)
     }
 
     z80->f &= C_FLAG | N_FLAG;
+    z80->f &= ~(X_FLAG | Y_FLAG);
     z80->f |= (z80->a > 0x99) ? C_FLAG : 0;
-    z80->f |= szflags(val) | parity(val);
+    z80->f |= szflags(val) | parity(val) | xyflags(val);
     z80->f |= (z80->a ^ val) & H_FLAG;
     z80->a = val;
 }
@@ -509,21 +510,22 @@ static void daa(struct Z80* z80)
 static void cpl(struct Z80* z80)
 {
      z80->a = ~z80->a;
-     z80->f |= (H_FLAG | N_FLAG);
+     z80->f &= ~(X_FLAG | Y_FLAG);
+     z80->f |= (H_FLAG | N_FLAG) | (z80->a & (X_FLAG | Y_FLAG));
 }
 
 static void ccf(struct Z80* z80)
 {
     uint8_t prev_carry = (z80->f & C_FLAG) << 4;
     z80->f ^= C_FLAG;
-    z80->f &= ~(N_FLAG | H_FLAG);
-    z80->f |= prev_carry;
+    z80->f &= ~(N_FLAG | H_FLAG | X_FLAG | Y_FLAG);
+    z80->f |= prev_carry | (z80->a & (X_FLAG | Y_FLAG));
 }
 
 static void scf(struct Z80* z80)
 {
-     z80->f &= ~(H_FLAG | N_FLAG);
-     z80->f |= C_FLAG;
+     z80->f &= ~(H_FLAG | N_FLAG | X_FLAG | Y_FLAG);
+     z80->f |= C_FLAG | (z80->a & (X_FLAG | Y_FLAG));
 }
 
 static void exec_instr(struct Z80* z80, uint8_t const opcode);
