@@ -1043,6 +1043,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xe0: if (~z80->f & P_FLAG) z80->pc = pop(z80); break; // ret po
         case 0xe1: z80->hl = pop(z80); break; // pop hl
         case 0xe2: jp(z80, ~z80->f & P_FLAG); break;  // jp po, nn
+        case 0xe3: { uint16_t hl = z80->hl; z80->hl = readw(z80, z80->sp); writew(z80, z80->sp, hl); break; } // ex (sp), hl
         case 0xe4: call(z80, ~z80->f & P_FLAG); break; // call po, nn
         case 0xe5: push(z80, z80->hl); break; // push hl
         case 0xe6: and(z80, instrb(z80)); break; // and n
