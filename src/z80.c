@@ -1,4 +1,4 @@
-#include "z80.h"
+#include "z80/z80.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -13,6 +13,23 @@
 #define P_FLAG (1 << 2)
 #define N_FLAG (1 << 1)
 #define C_FLAG (1 << 0)
+
+static uint8_t set(uint8_t byte, uint8_t bits)
+{
+    return byte | bits;
+}
+
+static uint8_t reset(uint8_t byte, uint8_t bits)
+{
+    return byte & ~bits;
+}
+
+static uint8_t mask(uint8_t byte, uint8_t bits, int condition)
+{
+    return condition
+        ? set(byte,  bits)
+        : reset(byte, bits);
+}
 
 static uint8_t readb(struct Z80* z80, int16_t const addr)
 {

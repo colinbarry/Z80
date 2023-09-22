@@ -1,9 +1,9 @@
-#include "z80.h"
+#include "z80/z80.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static void catchdebug() {}
+int has_error = 0;
 
 static uint8_t mem_load(struct Z80* z80, uint16_t const addr)
 {
@@ -12,11 +12,6 @@ static uint8_t mem_load(struct Z80* z80, uint16_t const addr)
 
 static void mem_store(struct Z80* z80, uint16_t const addr, uint8_t const value)
 {
-    /*
-    if (addr == 0x1ab) {
-        printf("WR: 0x%04x = 0x%02x PC: 0x%04x\n", addr, value, z80->pc);
-    }*/
-
     ((uint8_t*)z80->userdata)[addr] = value;
 }
 
@@ -31,6 +26,7 @@ static void port_store(struct Z80* z80, uint8_t port, uint8_t const val)
 
     if (operation == 0x02) {
         printf("%c", z80->e);
+        has_error = 1;
     } else if (operation == 0x09) {
         uint16_t addr = (z80->d << 8) | z80->e;
         uint8_t byte;
@@ -48,11 +44,16 @@ int main(int argc, char **argv)
     int length;
     uint8_t memory[65536] = {0};
 
+
+    if (argc < 2) {
+        printf("no rom file specified\n");
+        exit(EXIT_FAILURE);
+    }
+
     memset(memory, 0, sizeof(memory));
 
-    if ((romfile = fopen("./roms/zexdoc.cim", "rb")) == NULL) {
-    //if ((romfile = fopen("./roms/prelim.com", "rb")) == NULL) {
-        printf("could not open rom file\n");
+    if ((romfile = fopen(argv[1], "rb")) == NULL) {
+        printf("could not open rom file '%s'\n", argv[1]);
         exit(EXIT_FAILURE);
     }
 
@@ -87,5 +88,5 @@ int main(int argc, char **argv)
         //puts("");
     }
 
-    return EXIT_SUCCESS;
+    return has_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
