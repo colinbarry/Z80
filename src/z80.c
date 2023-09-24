@@ -1108,7 +1108,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xf7:
         case 0xff:
                    push(z80, z80->pc);
-                   z80->pc = 0x08 * ((opcode & 0x38) >> 8);
+                   z80->pc = 0x08 * ((opcode & 0x38) >> 3);
                    break;
 
         case 0xcb:
