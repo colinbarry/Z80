@@ -22,6 +22,7 @@ struct Z80 {
     uint8_t i, r;
     uint8_t iff;
     uint8_t halted;
+    uint8_t interrupt_mode;
 };
 
 void z80_init(struct Z80* z80);

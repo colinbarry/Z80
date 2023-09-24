@@ -796,12 +796,15 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x42: z80->hl = subcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // sbc hl, bc
         case 0x43: writew(z80, instrw(z80), z80->bc); break; // ld (nn), bc
         case 0x44: z80->a = subb(z80, 0, z80->a, 0); break; // neg
+        case 0x46: z80->interrupt_mode = 0; break; // im 0
         case 0x4a: z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG); break; // adc hl, bc
         case 0x4b: z80->bc = readw(z80, instrw(z80)); break; // ld bc, (nn)
         case 0x52: z80->hl = subcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // sbc hl, de
         case 0x53: writew(z80, instrw(z80), z80->de); break; // ld (nn), de
+        case 0x56: z80->interrupt_mode = 1; break; // im 1
         case 0x5a: z80->hl = addcw(z80, z80->hl, z80->de, z80->f & C_FLAG); break; // adc hl, de
         case 0x5b: z80->de = readw(z80, instrw(z80)); break; // ld de, (nn)
+        case 0x5e: z80->interrupt_mode = 2; break; // im 2
         case 0x62: z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // sbc hl, hl
         case 0x6a: z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG); break; // adc hl, hl
         case 0x67: rrd(z80); break; // rrd
