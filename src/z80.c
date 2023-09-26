@@ -249,12 +249,12 @@ static void call(struct Z80* z80, int test)
     }
 }
 
-static uint8_t in(struct Z80* z80, uint8_t const port)
+static uint8_t in(struct Z80* z80, uint16_t const port)
 {
     return z80->port_load(z80, port);
 }
 
-static void out(struct Z80* z80, uint8_t const port, uint8_t const val)
+static void out(struct Z80* z80, uint16_t const port, uint8_t const val)
 {
     z80->port_store(z80, port, val);
 }
@@ -810,6 +810,7 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x67: rrd(z80); break; // rrd
         case 0x6f: rld(z80); break; // rld
         case 0x72: z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // sbc hl, sp
+        case 0x78: z80->a = in(z80, ((uint16_t)z80->b << 8) | z80->c); break; // in a, (c)
         case 0x7a: z80->hl = addcw(z80, z80->hl, z80->sp, z80->f & C_FLAG); break; // adc hl, sp
 
         case 0x73: writew(z80, instrw(z80), z80->sp); break; // ld (nn), sp

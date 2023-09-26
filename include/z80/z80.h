@@ -3,8 +3,8 @@
 struct Z80 {
     uint8_t (*mem_load)(struct Z80*, uint16_t);
     void (*mem_store)(struct Z80*, uint16_t, uint8_t);
-    uint8_t (*port_load)(struct Z80*, uint8_t);
-    void (*port_store)(struct Z80* z80, uint8_t, uint8_t);
+    uint8_t (*port_load)(struct Z80*, uint16_t);
+    void (*port_store)(struct Z80* z80, uint16_t, uint8_t);
     void* userdata;
 
     uint16_t pc;
