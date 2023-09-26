@@ -1164,6 +1164,3 @@ void z80_trace(struct Z80* z80)
     printf("PC:0x%04X SP:0x%04X IX:0x%04X IY:0x%04X\n", z80->pc, z80->sp, z80->ix, z80->iy);
 }
 
-void z80_test(struct Z80* z80)
-{
-}
