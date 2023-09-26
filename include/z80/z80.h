@@ -20,14 +20,17 @@ struct Z80 {
     uint16_t dep;
     uint16_t hlp;
     uint8_t i, r;
-    uint8_t iff;
-    uint8_t halted;
     uint8_t interrupt_mode;
+    uint8_t iff1, iff2;
+    uint8_t interrupt_delay;
+    uint8_t halted;
 };
 
 void z80_init(struct Z80* z80);
 
 void z80_step(struct Z80* z80);
+
+void z80_interrupt(struct Z80* z80, uint8_t data);
 
 int z80_is_halted(struct Z80 const* z80);
 

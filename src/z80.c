@@ -545,6 +545,24 @@ static void scf(struct Z80* z80)
      z80->f |= C_FLAG | (z80->a & (X_FLAG | Y_FLAG));
 }
 
+static void handle_interrupts(struct Z80* z80)
+{
+    if (z80->iff1)
+    {
+        z80->iff1 = z80->iff2 = 0;
+
+        switch (z80->interrupt_mode)
+        {
+            case 1:
+            {
+                push(z80, z80->pc);
+                z80->pc = 0x38;
+                break;
+            }
+        }
+    }
+}
+
 static void exec_instr(struct Z80* z80, uint8_t const opcode);
 
 static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
@@ -1092,14 +1110,14 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xf0: if (~z80->f & S_FLAG) z80->pc = pop(z80); break; // ret p
         case 0xf1: z80->af = pop(z80); break; // pop af
         case 0xf2: jp(z80, ~z80->f & S_FLAG); break;  // jp p, nn
-        case 0xf3: z80->iff = 0; break; // di 
+        case 0xf3: z80->iff1 = z80->iff2 = 0; break; // di
         case 0xf4: call(z80, ~z80->f & S_FLAG); break; // call p, nn
         case 0xf5: push(z80, z80->af); break; // push af
         case 0xf6: or(z80, instrb(z80)); break; // or n
         case 0xf8: if (z80->f & S_FLAG) z80->pc = pop(z80); break; // ret m
         case 0xf9: z80->sp = z80->hl; break; // ld sp, hl
         case 0xfa: jp(z80, z80->f & S_FLAG); break;  // jp m, nn
-        case 0xfb: z80->iff = 1; break; // ei
+        case 0xfb: if (z80->interrupt_delay == 0) z80->interrupt_delay = 2; break; // ei
         case 0xfc: call(z80, z80->f & S_FLAG); break; // call m, nn
         case 0xfe: cp(z80, instrb(z80)); break; // cp n
 
@@ -1142,11 +1160,22 @@ void z80_init(struct Z80* z80)
 void z80_step(struct Z80* z80)
 {
     exec_instr(z80, instrb(z80));
+
+    if (z80->interrupt_delay)
+    {
+        if (--z80->interrupt_delay == 0)
+            z80->iff1 = z80->iff2 = 1;
+    }
 }
 
 int z80_is_halted(struct Z80 const* z80)
 {
     return z80->halted;
+}
+
+void z80_interrupt(struct Z80* z80, uint8_t data)
+{
+    handle_interrupts(z80);
 }
 
 void z80_trace(struct Z80* z80)
