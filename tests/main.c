@@ -15,12 +15,12 @@ static void mem_store(struct Z80* z80, uint16_t const addr, uint8_t const value)
     ((uint8_t*)z80->userdata)[addr] = value;
 }
 
-static uint8_t port_load(struct Z80* z80, uint8_t const port)
+static uint8_t port_load(struct Z80* z80, uint16_t const port)
 {
     return 0;
 }
 
-static void port_store(struct Z80* z80, uint8_t port, uint8_t const val)
+static void port_store(struct Z80* z80, uint16_t port, uint8_t const val)
 {
     uint8_t operation = z80->c;
 
