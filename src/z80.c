@@ -14,6 +14,57 @@
 #define N_FLAG (1 << 1)
 #define C_FLAG (1 << 0)
 
+static const uint8_t opcode_cycles[256]
+    = {4,  10, 7,  6,  4,  4,  7,  4,  4,  11, 7,  6,  4,  4,  7,  4,  8,  10,
+       7,  6,  4,  4,  7,  4,  12, 11, 7,  6,  4,  4,  7,  4,  7,  10, 16, 6,
+       4,  4,  7,  4,  7,  11, 16, 6,  4,  4,  7,  4,  7,  10, 13, 6,  11, 11,
+       10, 4,  7,  11, 13, 6,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+       4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  4,  4,
+       4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,
+       4,  4,  7,  4,  7,  7,  7,  7,  7,  7,  4,  7,  4,  4,  4,  4,  4,  4,
+       7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+       4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  4,  4,
+       4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,
+       4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  5,  10, 10, 10, 10, 11,
+       7,  11, 5,  10, 10, 0,  10, 17, 7,  11, 5,  10, 10, 11, 10, 11, 7,  11,
+       5,  4,  10, 11, 10, 0,  7,  11, 5,  10, 10, 19, 10, 11, 7,  11, 5,  4,
+       10, 4,  10, 0,  7,  11, 5,  10, 10, 4,  10, 11, 7,  11, 5,  6,  10, 4,
+       10, 0,  7,  11};
+
+static const uint8_t ed_opcode_cycles[256]
+    = {8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  12, 12, 15, 20, 8,  14, 8,  9,
+       12, 12, 15, 20, 8,  14, 8,  9,  12, 12, 15, 20, 8,  14, 8,  9,  12, 12,
+       15, 20, 8,  14, 8,  9,  12, 12, 15, 20, 8,  14, 8,  18, 12, 12, 15, 20,
+       8,  14, 8,  18, 12, 12, 15, 20, 8,  14, 8,  8,  12, 12, 15, 20, 8,  14,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  16, 16,
+       16, 16, 8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  16, 16, 16, 16,
+       8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8};
+
+static const uint8_t index_opcode_cycles[256]
+    = {4,  4, 4,  4,  8,  8,  11, 4,  4,  15, 4,  4,  8,  8,  11, 4,  4,  4,
+       4,  4, 8,  8,  11, 4,  4,  15, 4,  4,  8,  8,  11, 4,  4,  14, 20, 10,
+       8,  8, 11, 4,  4,  15, 20, 10, 8,  8,  11, 4,  4,  4,  4,  4,  23, 23,
+       19, 4, 4,  15, 4,  4,  8,  8,  11, 4,  8,  8,  8,  8,  8,  8,  19, 8,
+       8,  8, 8,  8,  8,  8,  19, 8,  8,  8,  8,  8,  8,  8,  19, 8,  8,  8,
+       8,  8, 8,  8,  19, 8,  8,  8,  8,  8,  8,  8,  19, 8,  8,  8,  8,  8,
+       8,  8, 19, 8,  19, 19, 19, 19, 19, 19, 4,  19, 8,  8,  8,  8,  8,  8,
+       19, 8, 8,  8,  8,  8,  8,  8,  19, 8,  8,  8,  8,  8,  8,  8,  19, 8,
+       8,  8, 8,  8,  8,  8,  19, 8,  8,  8,  8,  8,  8,  8,  19, 8,  8,  8,
+       8,  8, 8,  8,  19, 8,  8,  8,  8,  8,  8,  8,  19, 8,  8,  8,  8,  8,
+       8,  8, 19, 8,  8,  8,  8,  8,  8,  8,  19, 8,  4,  4,  4,  4,  4,  4,
+       4,  4, 4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
+       4,  4, 4,  4,  4,  4,  4,  4,  4,  14, 4,  23, 4,  15, 4,  4,  4,  8,
+       4,  4, 4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  10, 4,  4,
+       4,  4, 4,  4};
+
 static uint8_t set(uint8_t byte, uint8_t bits)
 {
     return byte | bits;
@@ -228,13 +279,23 @@ static void jr(struct Z80* z80, int test)
         z80->pc += offset;
 }
 
-static void call(struct Z80* z80, int test)
+static void callc(struct Z80* z80, int test)
 {
     uint16_t const addr = instrw(z80);
     if (test)
     {
         push(z80, z80->pc);
         z80->pc = addr;
+        z80->cycles += 7;
+    }
+}
+
+static void retc(struct Z80* z80, int test)
+{
+    if (test)
+    {
+        z80->pc = pop(z80);
+        z80->cycles += 6;
     }
 }
 
@@ -632,6 +693,8 @@ static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
             case 0x07: z80->a = val; break;
         }
     }
+
+    z80->cycles += (op == 0x01 ? 20 : 23);
 }
 
 static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
@@ -795,6 +858,8 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
 
         default: exec_instr(z80, opcode);
     }
+
+    z80->cycles += index_opcode_cycles[opcode];
 }
 
 static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
@@ -868,6 +933,12 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
             case 0x06: writeb(z80, z80->hl, val); break;
             case 0x07: z80->a = val; break;
         }
+
+        z80->cycles += (dest == 0x06 ? 15 : 8);
+    }
+    else
+    {
+        z80->cycles += (dest == 0x06 ? 12 : 8);
     }
 }
 
@@ -945,6 +1016,8 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             exit(EXIT_FAILURE);
             break;
     }
+
+    z80->cycles += ed_opcode_cycles[opcode];
 }
 
 static void exec_instr(struct Z80* z80, uint8_t const opcode)
@@ -1191,45 +1264,33 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xbd: cp(z80, z80->l); break;               // cp l
         case 0xbe: cp(z80, readw(z80, z80->hl)); break;  // cp (hl)
         case 0xbf: cp(z80, z80->a); break;               // cp a
-        case 0xc0:
-            if (~z80->f & Z_FLAG)
-                z80->pc = pop(z80);
-            break;                                     // ret nz
-        case 0xc1: z80->bc = pop(z80); break;          // pop bc
-        case 0xc2: jp(z80, ~z80->f & Z_FLAG); break;   // jp nz, nn
-        case 0xc3: z80->pc = instrw(z80); break;       // jp nn
-        case 0xc4: call(z80, ~z80->f & Z_FLAG); break; // call nz, nn
-        case 0xc5: push(z80, z80->bc); break;          // push bc
+        case 0xc0: retc(z80, ~z80->f & Z_FLAG); break;   // ret nz
+        case 0xc1: z80->bc = pop(z80); break;            // pop bc
+        case 0xc2: jp(z80, ~z80->f & Z_FLAG); break;     // jp nz, nn
+        case 0xc3: z80->pc = instrw(z80); break;         // jp nn
+        case 0xc4: callc(z80, ~z80->f & Z_FLAG); break;  // call nz, nn
+        case 0xc5: push(z80, z80->bc); break;            // push bc
         case 0xc6:
             z80->a = addb(z80, z80->a, instrb(z80), 0);
-            break; // add a, n
-        case 0xc8:
-            if (z80->f & Z_FLAG)
-                z80->pc = pop(z80);
-            break;                                    // ret z
-        case 0xc9: z80->pc = pop(z80); break;         // ret
-        case 0xca: jp(z80, z80->f & Z_FLAG); break;   // jp z, nn
-        case 0xcc: call(z80, z80->f & Z_FLAG); break; // call z, nn
-        case 0xcd: call(z80, 1); break;               // call nn
+            break;                                     // add a, n
+        case 0xc8: retc(z80, z80->f & Z_FLAG); break;  // ret z
+        case 0xc9: z80->pc = pop(z80); break;          // ret
+        case 0xca: jp(z80, z80->f & Z_FLAG); break;    // jp z, nn
+        case 0xcc: callc(z80, z80->f & Z_FLAG); break; // call z, nn
+        case 0xcd: callc(z80, 1); break;               // call nn
         case 0xce:
             z80->a = addb(z80, z80->a, instrb(z80), z80->f & C_FLAG);
-            break; // adc a, n
-        case 0xd0:
-            if (~z80->f & C_FLAG)
-                z80->pc = pop(z80);
-            break;                                       // ret nc
+            break;                                       // adc a, n
+        case 0xd0: retc(z80, ~z80->f & C_FLAG); break;   // ret nc
         case 0xd1: z80->de = pop(z80); break;            // pop de
         case 0xd2: jp(z80, ~z80->f & C_FLAG); break;     // jp nc, nn
         case 0xd3: out(z80, instrb(z80), z80->a); break; // out (n), a
-        case 0xd4: call(z80, ~z80->f & C_FLAG); break;   // call nc, nn
+        case 0xd4: callc(z80, ~z80->f & C_FLAG); break;  // call nc, nn
         case 0xd5: push(z80, z80->de); break;            // push de
         case 0xd6:
             z80->a = subb(z80, z80->a, instrb(z80), 0);
-            break; // adc a, n
-        case 0xd8:
-            if (z80->f & C_FLAG)
-                z80->pc = pop(z80);
-            break; // ret c
+            break;                                    // adc a, n
+        case 0xd8: retc(z80, z80->f & C_FLAG); break; // ret c
         case 0xd9: {
             uint16_t const bc = z80->bc;
             uint16_t const de = z80->de;
@@ -1244,62 +1305,50 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         }
         case 0xda: jp(z80, z80->f & C_FLAG); break;      // jp c, nn
         case 0xdb: z80->a = in(z80, instrb(z80)); break; // in a, (n)
-        case 0xdc: call(z80, z80->f & C_FLAG); break;    // call c, nn
+        case 0xdc: callc(z80, z80->f & C_FLAG); break;   // call c, nn
         case 0xde:
             z80->a = subb(z80, z80->a, instrb(z80), z80->f & C_FLAG);
-            break; // sbc a, n
-        case 0xe0:
-            if (~z80->f & P_FLAG)
-                z80->pc = pop(z80);
-            break;                                   // ret po
-        case 0xe1: z80->hl = pop(z80); break;        // pop hl
-        case 0xe2: jp(z80, ~z80->f & P_FLAG); break; // jp po, nn
+            break;                                     // sbc a, n
+        case 0xe0: retc(z80, ~z80->f & P_FLAG); break; // ret po
+        case 0xe1: z80->hl = pop(z80); break;          // pop hl
+        case 0xe2: jp(z80, ~z80->f & P_FLAG); break;   // jp po, nn
         case 0xe3: {
             uint16_t hl = z80->hl;
             z80->hl = readw(z80, z80->sp);
             writew(z80, z80->sp, hl);
             break;
-        }                                              // ex (sp), hl
-        case 0xe4: call(z80, ~z80->f & P_FLAG); break; // call po, nn
-        case 0xe5: push(z80, z80->hl); break;          // push hl
-        case 0xe6: and(z80, instrb(z80)); break;       // and n
-        case 0xe8:
-            if (z80->f & P_FLAG)
-                z80->pc = pop(z80);
-            break;                                  // ret pe
-        case 0xe9: z80->pc = z80->hl; break;        // jp (hl)
-        case 0xea: jp(z80, z80->f & P_FLAG); break; // jp pe, nn
+        }                                               // ex (sp), hl
+        case 0xe4: callc(z80, ~z80->f & P_FLAG); break; // call po, nn
+        case 0xe5: push(z80, z80->hl); break;           // push hl
+        case 0xe6: and(z80, instrb(z80)); break;        // and n
+        case 0xe8: retc(z80, z80->f & P_FLAG); break;   // ret pe
+        case 0xe9: z80->pc = z80->hl; break;            // jp (hl)
+        case 0xea: jp(z80, z80->f & P_FLAG); break;     // jp pe, nn
         case 0xeb: {
             uint16_t de = z80->de;
             z80->de = z80->hl;
             z80->hl = de;
             break;
-        }                                             // ex de, hl
-        case 0xec: call(z80, z80->f & P_FLAG); break; // call pe, nn
+        }                                              // ex de, hl
+        case 0xec: callc(z80, z80->f & P_FLAG); break; // call pe, nn
         case 0xed: exec_ed_instr(z80, instrb(z80)); break;
-        case 0xee: xor(z80, instrb(z80)); break; // xor n
-        case 0xf0:
-            if (~z80->f & S_FLAG)
-                z80->pc = pop(z80);
-            break;                                     // ret p
-        case 0xf1: z80->af = pop(z80); break;          // pop af
-        case 0xf2: jp(z80, ~z80->f & S_FLAG); break;   // jp p, nn
-        case 0xf3: z80->iff1 = z80->iff2 = 0; break;   // di
-        case 0xf4: call(z80, ~z80->f & S_FLAG); break; // call p, nn
-        case 0xf5: push(z80, z80->af); break;          // push af
-        case 0xf6: or (z80, instrb(z80)); break;       // or n
-        case 0xf8:
-            if (z80->f & S_FLAG)
-                z80->pc = pop(z80);
-            break;                                  // ret m
-        case 0xf9: z80->sp = z80->hl; break;        // ld sp, hl
-        case 0xfa: jp(z80, z80->f & S_FLAG); break; // jp m, nn
+        case 0xee: xor(z80, instrb(z80)); break;        // xor n
+        case 0xf0: retc(z80, ~z80->f & S_FLAG); break;  // ret p
+        case 0xf1: z80->af = pop(z80); break;           // pop af
+        case 0xf2: jp(z80, ~z80->f & S_FLAG); break;    // jp p, nn
+        case 0xf3: z80->iff1 = z80->iff2 = 0; break;    // di
+        case 0xf4: callc(z80, ~z80->f & S_FLAG); break; // call p, nn
+        case 0xf5: push(z80, z80->af); break;           // push af
+        case 0xf6: or (z80, instrb(z80)); break;        // or n
+        case 0xf8: retc(z80, z80->f & S_FLAG); break;   // ret m
+        case 0xf9: z80->sp = z80->hl; break;            // ld sp, hl
+        case 0xfa: jp(z80, z80->f & S_FLAG); break;     // jp m, nn
         case 0xfb:
             if (z80->interrupt_delay == 0)
                 z80->interrupt_delay = 2;
-            break;                                    // ei
-        case 0xfc: call(z80, z80->f & S_FLAG); break; // call m, nn
-        case 0xfe: cp(z80, instrb(z80)); break;       // cp n
+            break;                                     // ei
+        case 0xfc: callc(z80, z80->f & S_FLAG); break; // call m, nn
+        case 0xfe: cp(z80, instrb(z80)); break;        // cp n
 
         case 0xc7:
         case 0xcf:
@@ -1324,6 +1373,8 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
             exit(EXIT_FAILURE);
             break;
     }
+
+    z80->cycles += opcode_cycles[opcode];
 }
 
 /*****************************************************************************/

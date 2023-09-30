@@ -24,6 +24,7 @@ struct Z80 {
     uint8_t iff1, iff2;
     uint8_t interrupt_delay;
     uint8_t halted;
+    uint64_t cycles;
 };
 
 void z80_init(struct Z80* z80);
