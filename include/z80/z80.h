@@ -29,7 +29,7 @@ struct Z80 {
 
 void z80_init(struct Z80* z80);
 
-void z80_step(struct Z80* z80);
+int64_t z80_step(struct Z80* z80);
 
 void z80_interrupt(struct Z80* z80, uint8_t data);
 

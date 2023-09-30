@@ -1386,8 +1386,10 @@ void z80_init(struct Z80* z80)
     z80->a = 0xff;
 }
 
-void z80_step(struct Z80* z80)
+int64_t z80_step(struct Z80* z80)
 {
+    int64_t const cycles = z80->cycles;
+
     exec_instr(z80, instrb(z80));
 
     if (z80->interrupt_delay)
@@ -1395,6 +1397,8 @@ void z80_step(struct Z80* z80)
         if (--z80->interrupt_delay == 0)
             z80->iff1 = z80->iff2 = 1;
     }
+
+    return z80->cycles - cycles;
 }
 
 int z80_is_halted(struct Z80 const* z80)
