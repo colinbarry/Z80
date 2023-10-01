@@ -276,7 +276,10 @@ static void jr(struct Z80* z80, int test)
 {
     int8_t const offset = (int8_t)instrb(z80);
     if (test)
+    {
         z80->pc += offset;
+        z80->cycles += 5;
+    }
 }
 
 static void callc(struct Z80* z80, int test)
