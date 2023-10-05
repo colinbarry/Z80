@@ -44,8 +44,8 @@ static const uint8_t ed_opcode_cycles[256]
        16, 16, 8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  16, 16, 16, 16,
        8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
        8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
-       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
-       8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
+       8,  8,  8,  8,  8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  16, 16,
+       16, 16, 8,  8,  8,  8,  16, 16, 16, 16, 8,  8,  8,  8,  16, 16, 16, 16,
        8,  8,  8,  8};
 
 static const uint8_t index_opcode_cycles[256]
@@ -282,6 +282,13 @@ static void jr(struct Z80* z80, int test)
     }
 }
 
+static void call(struct Z80* z80)
+{
+    uint16_t const addr = instrw(z80);
+    push(z80, z80->pc);
+    z80->pc = addr;
+}
+
 static void callc(struct Z80* z80, int test)
 {
     uint16_t const addr = instrw(z80);
@@ -346,14 +353,20 @@ static void lddr(struct Z80* z80)
 {
     ldd(z80);
     if (z80->f & P_FLAG)
+    {
         z80->pc -= 2;
+        z80->cycles += 5;
+    }
 }
 
 static void ldir(struct Z80* z80)
 {
     ldi(z80);
     if (z80->f & P_FLAG)
+    {
         z80->pc -= 2;
+        z80->cycles += 5;
+    }
 }
 
 static void cpd(struct Z80* z80)
@@ -382,7 +395,10 @@ static void cpdr(struct Z80* z80)
 {
     cpd(z80);
     if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
+    {
         z80->pc -= 2;
+        z80->cycles += 5;
+    }
 }
 
 static void cpi(struct Z80* z80)
@@ -411,7 +427,10 @@ static void cpir(struct Z80* z80)
 {
     cpi(z80);
     if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
+    {
         z80->pc -= 2;
+        z80->cycles += 5;
+    }
 }
 
 static uint8_t rlc(struct Z80* z80, uint8_t val)
@@ -1280,7 +1299,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xc9: z80->pc = pop(z80); break;          // ret
         case 0xca: jp(z80, z80->f & Z_FLAG); break;    // jp z, nn
         case 0xcc: callc(z80, z80->f & Z_FLAG); break; // call z, nn
-        case 0xcd: callc(z80, 1); break;               // call nn
+        case 0xcd: call(z80); break;                   // call nn
         case 0xce:
             z80->a = addb(z80, z80->a, instrb(z80), z80->f & C_FLAG);
             break;                                       // adc a, n
@@ -1393,7 +1412,14 @@ int64_t z80_step(struct Z80* z80)
 {
     int64_t const cycles = z80->cycles;
 
-    exec_instr(z80, instrb(z80));
+    if (!z80->halted)
+    {
+        exec_instr(z80, instrb(z80));
+    }
+    else
+    {
+        exec_instr(z80, 0x00);
+    }
 
     if (z80->interrupt_delay)
     {
