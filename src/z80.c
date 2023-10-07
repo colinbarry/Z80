@@ -1022,8 +1022,9 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x70: inbc(z80); break;          // in l, (c)
         case 0x72:
             z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG);
-            break;                            // sbc hl, sp
-        case 0x78: z80->a = inbc(z80); break; // in a, (c)
+            break;                                   // sbc hl, sp
+        case 0x78: z80->a = inbc(z80); break;        // in a, (c)
+        case 0x79: out(z80, z80->bc, z80->a); break; // out (c), a
         case 0x7a:
             z80->hl = addcw(z80, z80->hl, z80->sp, z80->f & C_FLAG);
             break; // adc hl, sp
@@ -1341,9 +1342,11 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
             z80->hlp = hl;
             break;
         }
-        case 0xda: jp(z80, z80->f & C_FLAG); break;      // jp c, nn
-        case 0xdb: z80->a = in(z80, instrb(z80)); break; // in a, (n)
-        case 0xdc: callc(z80, z80->f & C_FLAG); break;   // call c, nn
+        case 0xda: jp(z80, z80->f & C_FLAG); break; // jp c, nn
+        case 0xdb:
+            z80->a = in(z80, ((uint16_t)z80->a << 8) | instrb(z80));
+            break;                                     // in a, (n)
+        case 0xdc: callc(z80, z80->f & C_FLAG); break; // call c, nn
         case 0xde:
             z80->a = subb(z80, z80->a, instrb(z80), z80->f & C_FLAG);
             break;                                     // sbc a, n
