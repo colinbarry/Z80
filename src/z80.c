@@ -632,24 +632,40 @@ static uint8_t inbc(struct Z80* z80)
     return val;
 }
 
-static void handle_interrupts(struct Z80* z80)
+static void exec_instr(struct Z80* z80, uint8_t const opcode);
+
+static void handle_interrupts(struct Z80* z80, uint8_t const data)
 {
+    z80->halted = 0;
+
     if (z80->iff1)
     {
         z80->iff1 = z80->iff2 = 0;
 
         switch (z80->interrupt_mode)
         {
+            case 0: {
+                z80->cycles += 11;
+                exec_instr(z80, data);
+                break;
+            }
+
             case 1: {
+                z80->cycles += 13;
                 push(z80, z80->pc);
                 z80->pc = 0x38;
+                break;
+            }
+
+            case 2: {
+                z80->cycles += 19;
+                push(z80, z80->pc);
+                z80->pc = readw(z80, (z80->i << 8) | data);
                 break;
             }
         }
     }
 }
-
-static void exec_instr(struct Z80* z80, uint8_t const opcode);
 
 static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
 {
@@ -1439,7 +1455,7 @@ int z80_is_halted(struct Z80 const* z80)
 
 void z80_interrupt(struct Z80* z80, uint8_t data)
 {
-    handle_interrupts(z80);
+    handle_interrupts(z80, data);
 }
 
 void z80_trace(struct Z80* z80)
