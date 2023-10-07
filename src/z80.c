@@ -1046,7 +1046,7 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0xb2:
         case 0xb3:
         case 0xba:
-        case 0xbb: break; // @TODO impl
+        case 0xbb:
 
         default:
             printf("unimplemented opcode 0xed%02X at %x\n", opcode, z80->pc - 1);
