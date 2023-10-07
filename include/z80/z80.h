@@ -5,6 +5,10 @@ struct Z80 {
     void (*mem_store)(struct Z80*, uint16_t, uint8_t);
     uint8_t (*port_load)(struct Z80*, uint16_t);
     void (*port_store)(struct Z80* z80, uint16_t, uint8_t);
+
+    // Trap will be called on each instruction. Returning a truthy value
+    // informs the emulator that the trap has handled the operation.
+    uint8_t (*trap)(struct Z80* z80, uint16_t, uint8_t);
     void* userdata;
 
     uint16_t pc;

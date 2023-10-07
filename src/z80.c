@@ -1414,7 +1414,9 @@ int64_t z80_step(struct Z80* z80)
 
     if (!z80->halted)
     {
-        exec_instr(z80, instrb(z80));
+        uint8_t const opcode = instrb(z80);
+        if (!z80->trap || !z80->trap(z80, z80->pc - 1, opcode))
+            exec_instr(z80, opcode);
     }
     else
     {
