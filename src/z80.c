@@ -998,52 +998,84 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             break;                                           // sbc hl, bc
         case 0x43: writew(z80, instrw(z80), z80->bc); break; // ld (nn), bc
         case 0x44: z80->a = subb(z80, 0, z80->a, 0); break;  // neg
-        case 0x46: z80->interrupt_mode = 0; break;           // im 0
-        case 0x47: z80->i = z80->a; break;                   // ld i, a
-        case 0x48: z80->c = inbc(z80); break;                // in c, (c)
-        case 0x49: out(z80, z80->bc, z80->c); break;         // out (c), c
+        case 0x45:
+            z80->pc = pop(z80);
+            z80->iff1 = z80->iff2;
+            break; // retn
+        case 0x46:
+        case 0x66: z80->interrupt_mode = 0; break;   // im 0
+        case 0x47: z80->i = z80->a; break;           // ld i, a
+        case 0x48: z80->c = inbc(z80); break;        // in c, (c)
+        case 0x49: out(z80, z80->bc, z80->c); break; // out (c), c
         case 0x4a:
             z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG);
             break;                                           // adc hl, bc
         case 0x4b: z80->bc = readw(z80, instrw(z80)); break; // ld bc, (nn)
-        case 0x50: z80->d = inbc(z80); break;                // in d, (c)
-        case 0x51: out(z80, z80->bc, z80->d); break;         // out (c), d
+        case 0x4c: z80->bc = z80->b * z80->c; break;         // mlt bc
+        case 0x4d: z80->pc = pop(z80); break;                // reti
+        case 0x4e:
+        case 0x6e: z80->interrupt_mode = 0; break;   // im 0/1 [undoc]
+        case 0x4f: z80->r = z80->a; break;           // ld r, a
+        case 0x50: z80->d = inbc(z80); break;        // in d, (c)
+        case 0x51: out(z80, z80->bc, z80->d); break; // out (c), d
         case 0x52:
             z80->hl = subcw(z80, z80->hl, z80->de, z80->f & C_FLAG);
             break;                                           // sbc hl, de
         case 0x53: writew(z80, instrw(z80), z80->de); break; // ld (nn), de
-        case 0x56: z80->interrupt_mode = 1; break;           // im 1
-        case 0x58: z80->e = inbc(z80); break;                // in e, (c)
-        case 0x59: out(z80, z80->bc, z80->e); break;         // out (c), e
+        case 0x54:
+        case 0x74:
+        case 0x7c: z80->a = subb(z80, 0, z80->a, 0); break; // neg [undoc]
+        case 0x55:
+        case 0x5d:
+        case 0x65:
+        case 0x6d:
+        case 0x75:
+        case 0x7d: z80->pc = pop(z80); break; // ret [undoc]
+        case 0x56:
+        case 0x76: z80->interrupt_mode = 1; break;   // im 1
+        case 0x57: z80->a = z80->i; break;           // ld a, i
+        case 0x58: z80->e = inbc(z80); break;        // in e, (c)
+        case 0x59: out(z80, z80->bc, z80->e); break; // out (c), e
         case 0x5a:
             z80->hl = addcw(z80, z80->hl, z80->de, z80->f & C_FLAG);
             break;                                           // adc hl, de
         case 0x5b: z80->de = readw(z80, instrw(z80)); break; // ld de, (nn)
-        case 0x5e: z80->interrupt_mode = 2; break;           // im 2
-        case 0x60: z80->h = inbc(z80); break;                // in h, (c)
-        case 0x61: out(z80, z80->bc, z80->d); break;         // out (c), h
+        case 0x5c: z80->de = z80->d * z80->e; break;         // mlt de
+        case 0x5e:
+        case 0x7e: z80->interrupt_mode = 2; break;   // im 2
+        case 0x5f: z80->a = z80->r; break;           // ld a, r
+        case 0x60: z80->h = inbc(z80); break;        // in h, (c)
+        case 0x61: out(z80, z80->bc, z80->d); break; // out (c), h
         case 0x62:
             z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
-            break; // sbc hl, hl
-        case 0x6a:
-            z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
-            break;                                   // adc hl, hl
+            break;                                           // sbc hl, hl
+        case 0x63: writew(z80, instrw(z80), z80->hl); break; // ld (nn), hl
+        case 0x64: {
+            uint8_t const pa = z80->a;
+            and(z80, instrb(z80));
+            z80->a = pa;
+            break;
+        }                                            // tst n
         case 0x67: rrd(z80); break;                  // rrd
         case 0x68: z80->l = inbc(z80); break;        // in l, (c)
         case 0x69: out(z80, z80->bc, z80->l); break; // out (c), l
-        case 0x6f: rld(z80); break;                  // rld
-        case 0x70: inbc(z80); break;                 // in l, (c)
-        case 0x71: out(z80, z80->bc, 0); break;      // out (c), a
+        case 0x6a:
+            z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
+            break;                                           // adc hl, hl
+        case 0x6b: z80->hl = readw(z80, instrw(z80)); break; // ld hl, (nn)
+        case 0x6c: z80->hl = z80->h * z80->l; break;         // mlt hl
+        case 0x6f: rld(z80); break;                          // rld
+        case 0x70: inbc(z80); break;                         // in l, (c)
+        case 0x71: out(z80, z80->bc, 0); break;              // out (c), a
         case 0x72:
             z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG);
-            break;                                   // sbc hl, sp
-        case 0x78: z80->a = inbc(z80); break;        // in a, (c)
-        case 0x79: out(z80, z80->bc, z80->a); break; // out (c), a
+            break;                                           // sbc hl, sp
+        case 0x73: writew(z80, instrw(z80), z80->sp); break; // ld (nn), sp
+        case 0x78: z80->a = inbc(z80); break;                // in a, (c)
+        case 0x79: out(z80, z80->bc, z80->a); break;         // out (c), a
         case 0x7a:
             z80->hl = addcw(z80, z80->hl, z80->sp, z80->f & C_FLAG);
-            break; // adc hl, sp
-
-        case 0x73: writew(z80, instrw(z80), z80->sp); break; // ld (nn), sp
+            break;                                           // adc hl, sp
         case 0x7b: z80->sp = readw(z80, instrw(z80)); break; // ld sp, (nn)
         case 0xa0: ldi(z80); break;                          // ldi
         case 0xa1: cpi(z80); break;                          // cpi
