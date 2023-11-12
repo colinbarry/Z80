@@ -748,6 +748,8 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
     uint8_t* l = (uint8_t*)reg;
     uint8_t* h = l + 1;
 
+    ++z80->r;
+
     switch (opcode)
     {
         case 0x09: *reg = addw(z80, *reg, z80->bc); break; // add i*, bc
@@ -844,7 +846,9 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
             break; // ld (i* + d), a
         case 0x7e:
             z80->a = readw(z80, *reg + dispb(z80));
-            break; // ld a, (i* + d)
+            break;                              // ld a, (i* + d)
+        case 0x7c: z80->a = *reg >> 8; break;   // ld a, (i*h)
+        case 0x7d: z80->a = *reg & 0xff; break; // ld a, (i*l)
         case 0x84:
             z80->a = addb(z80, z80->a, *reg >> 8, 0);
             break;                                             // add a, i*h
@@ -896,8 +900,15 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0xbd: cp(z80, *reg); break;                          // cp i*l
         case 0xbe: cp(z80, readw(z80, *reg + dispb(z80))); break; // cp (ix + d)
         case 0xe1: *reg = pop(z80); break;                        // pop i*
-        case 0xe5: push(z80, *reg); break;                        // push i*
-        case 0xe9: z80->pc = *reg; break;                         // jp (i*)
+        case 0xe3: {
+            uint16_t tmp = *reg;
+            *reg = readw(z80, z80->sp);
+            writew(z80, z80->sp, tmp);
+            break;
+        }                                  // ex (sp), i*
+        case 0xe5: push(z80, *reg); break; // push i*
+        case 0xe9: z80->pc = *reg; break;  // jp (i*)
+        case 0xf9: z80->sp = *reg; break;  // ld sp, i*
 
         case 0xcb: exec_indexcb_instr(z80, sel); break;
 
@@ -913,6 +924,8 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
     uint8_t const type = (opcode >> 3) & 0x7;
     uint8_t const dest = opcode & 0x07;
     uint8_t val;
+
+    ++z80->r;
 
     switch (dest)
     {
@@ -989,6 +1002,8 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
 
 static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
 {
+    ++z80->r;
+
     switch (opcode)
     {
         case 0x40: z80->b = inbc(z80); break;        // in b, (c)
@@ -1011,7 +1026,6 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG);
             break;                                           // adc hl, bc
         case 0x4b: z80->bc = readw(z80, instrw(z80)); break; // ld bc, (nn)
-        case 0x4c: z80->bc = z80->b * z80->c; break;         // mlt bc
         case 0x4d: z80->pc = pop(z80); break;                // reti
         case 0x4e:
         case 0x6e: z80->interrupt_mode = 0; break;   // im 0/1 [undoc]
@@ -1022,7 +1036,11 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->hl = subcw(z80, z80->hl, z80->de, z80->f & C_FLAG);
             break;                                           // sbc hl, de
         case 0x53: writew(z80, instrw(z80), z80->de); break; // ld (nn), de
+        case 0x4c:
         case 0x54:
+        case 0x5c:
+        case 0x64:
+        case 0x6c:
         case 0x74:
         case 0x7c: z80->a = subb(z80, 0, z80->a, 0); break; // neg [undoc]
         case 0x55:
@@ -1040,7 +1058,6 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->hl = addcw(z80, z80->hl, z80->de, z80->f & C_FLAG);
             break;                                           // adc hl, de
         case 0x5b: z80->de = readw(z80, instrw(z80)); break; // ld de, (nn)
-        case 0x5c: z80->de = z80->d * z80->e; break;         // mlt de
         case 0x5e:
         case 0x7e: z80->interrupt_mode = 2; break;   // im 2
         case 0x5f: z80->a = z80->r; break;           // ld a, r
@@ -1050,20 +1067,13 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
             break;                                           // sbc hl, hl
         case 0x63: writew(z80, instrw(z80), z80->hl); break; // ld (nn), hl
-        case 0x64: {
-            uint8_t const pa = z80->a;
-            and(z80, instrb(z80));
-            z80->a = pa;
-            break;
-        }                                            // tst n
-        case 0x67: rrd(z80); break;                  // rrd
-        case 0x68: z80->l = inbc(z80); break;        // in l, (c)
-        case 0x69: out(z80, z80->bc, z80->l); break; // out (c), l
+        case 0x67: rrd(z80); break;                          // rrd
+        case 0x68: z80->l = inbc(z80); break;                // in l, (c)
+        case 0x69: out(z80, z80->bc, z80->l); break;         // out (c), l
         case 0x6a:
             z80->hl = addcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
             break;                                           // adc hl, hl
         case 0x6b: z80->hl = readw(z80, instrw(z80)); break; // ld hl, (nn)
-        case 0x6c: z80->hl = z80->h * z80->l; break;         // mlt hl
         case 0x6f: rld(z80); break;                          // rld
         case 0x70: inbc(z80); break;                         // in l, (c)
         case 0x71: out(z80, z80->bc, 0); break;              // out (c), a
@@ -1093,7 +1103,7 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0xb2:
         case 0xb3:
         case 0xba:
-        case 0xbb:
+        case 0xbb: break; // @TODO impl these
 
         default:
             printf("unimplemented opcode 0xed%02X at %x\n", opcode, z80->pc - 1);
@@ -1239,7 +1249,10 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x73: writeb(z80, z80->hl, z80->e); break;          // ld (hl), e
         case 0x74: writeb(z80, z80->hl, z80->h); break;          // ld (hl), h
         case 0x75: writeb(z80, z80->hl, z80->l); break;          // ld (hl), l
-        case 0x76: z80->halted = 1; break;
+        case 0x76:
+            z80->halted = 1;
+            --z80->pc;
+            break;                                               // halt
         case 0x77: writeb(z80, z80->hl, z80->a); break;          // ld (hl), a
         case 0x78: z80->a = z80->b; break;                       // ld a, b
         case 0x79: z80->a = z80->c; break;                       // ld a, c
@@ -1476,6 +1489,8 @@ void z80_init(struct Z80* z80)
 int64_t z80_step(struct Z80* z80)
 {
     int64_t const cycles = z80->cycles;
+
+    ++z80->r;
 
     if (!z80->halted)
     {
