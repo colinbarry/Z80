@@ -1443,10 +1443,12 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0xf8: retc(z80, z80->f & S_FLAG); break;   // ret m
         case 0xf9: z80->sp = z80->hl; break;            // ld sp, hl
         case 0xfa: jp(z80, z80->f & S_FLAG); break;     // jp m, nn
-        case 0xfb:
+        case 0xfb: {
+            z80->iff1 = z80->iff2 = 1;
             if (z80->interrupt_delay == 0)
                 z80->interrupt_delay = 2;
-            break;                                     // ei
+            break;
+        }                                              // ei
         case 0xfc: callc(z80, z80->f & S_FLAG); break; // call m, nn
         case 0xfe: cp(z80, instrb(z80)); break;        // cp n
 
@@ -1519,7 +1521,8 @@ int z80_is_halted(struct Z80 const* z80)
 
 void z80_interrupt(struct Z80* z80, uint8_t data)
 {
-    handle_interrupts(z80, data);
+    if (z80->interrupt_delay == 0)
+        handle_interrupts(z80, data);
 }
 
 void z80_trace(struct Z80* z80)
