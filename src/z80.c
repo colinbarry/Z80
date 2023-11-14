@@ -639,6 +639,11 @@ static uint8_t inbc(struct Z80* z80)
     return val;
 }
 
+static void incr(struct Z80* z80)
+{
+    z80->r = (z80->r & 0x80) | ((z80->r & 0x7F) + 1);
+}
+
 static void exec_instr(struct Z80* z80, uint8_t const opcode);
 
 static void handle_interrupts(struct Z80* z80, uint8_t const data)
@@ -748,7 +753,7 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
     uint8_t* l = (uint8_t*)reg;
     uint8_t* h = l + 1;
 
-    ++z80->r;
+    incr(z80);
 
     switch (opcode)
     {
@@ -925,7 +930,7 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
     uint8_t const dest = opcode & 0x07;
     uint8_t val;
 
-    ++z80->r;
+    incr(z80);
 
     switch (dest)
     {
@@ -1002,7 +1007,7 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
 
 static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
 {
-    ++z80->r;
+    incr(z80);
 
     switch (opcode)
     {
@@ -1492,7 +1497,7 @@ int64_t z80_step(struct Z80* z80)
 {
     int64_t const cycles = z80->cycles;
 
-    ++z80->r;
+    incr(z80);
 
     if (!z80->halted)
     {
