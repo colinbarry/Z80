@@ -341,6 +341,16 @@ static void ldd(struct Z80* z80)
         z80->f |= P_FLAG;
 }
 
+static void lddr(struct Z80* z80)
+{
+    ldd(z80);
+    if (z80->f & P_FLAG)
+    {
+        z80->pc -= 2;
+        z80->cycles += 5;
+    }
+}
+
 static void ldi(struct Z80* z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
@@ -356,9 +366,9 @@ static void ldi(struct Z80* z80)
         z80->f |= P_FLAG;
 }
 
-static void lddr(struct Z80* z80)
+static void ldir(struct Z80* z80)
 {
-    ldd(z80);
+    ldi(z80);
     if (z80->f & P_FLAG)
     {
         z80->pc -= 2;
@@ -366,10 +376,112 @@ static void lddr(struct Z80* z80)
     }
 }
 
-static void ldir(struct Z80* z80)
+static void ini(struct Z80* z80)
 {
-    ldi(z80);
-    if (z80->f & P_FLAG)
+    uint8_t const byte = in(z80, z80->bc);
+    uint16_t const tmp = byte + ((z80->c + 1) & 0xff);
+
+    writeb(z80, z80->hl, byte);
+    --z80->b;
+    ++z80->hl;
+
+    z80->f = parity((tmp & 0x07) ^ z80->b) | xyflags(z80->b) | szflags(z80->b);
+
+    if (tmp & 0x100)
+        z80->f |= C_FLAG | H_FLAG;
+
+    if (z80->f & S_FLAG)
+        z80->f |= N_FLAG;
+}
+
+static void inir(struct Z80* z80)
+{
+    ini(z80);
+    if (z80->b)
+    {
+        z80->pc -= 2;
+        z80->cycles += 5;
+    }
+}
+
+static void ind(struct Z80* z80)
+{
+    uint8_t const byte = in(z80, z80->bc);
+    uint16_t const tmp = byte + ((z80->c - 1) & 0xff);
+
+    writeb(z80, z80->hl, byte);
+    --z80->b;
+    --z80->hl;
+
+    z80->f = parity((tmp & 0x07) ^ z80->b) | xyflags(z80->b) | szflags(z80->b);
+
+    if (tmp & 0x100)
+        z80->f |= C_FLAG | H_FLAG;
+
+    if (z80->f & S_FLAG)
+        z80->f |= N_FLAG;
+}
+
+static void indr(struct Z80* z80)
+{
+    ind(z80);
+    if (z80->b)
+    {
+        z80->pc -= 2;
+        z80->cycles += 5;
+    }
+}
+
+static void outi(struct Z80* z80)
+{
+    uint8_t const byte = readb(z80, z80->hl);
+    out(z80, z80->bc, byte);
+
+    --z80->b;
+    ++z80->hl;
+    uint16_t const tmp = byte + z80->l;
+
+    z80->f = parity((tmp & 0x07) ^ z80->b) | xyflags(z80->b) | szflags(z80->b);
+
+    if (tmp & 0x100)
+        z80->f |= C_FLAG | H_FLAG;
+
+    if (byte & S_FLAG)
+        z80->f |= N_FLAG;
+}
+
+static void otir(struct Z80* z80)
+{
+    outi(z80);
+    if (z80->b)
+    {
+        z80->pc -= 2;
+        z80->cycles += 5;
+    }
+}
+
+static void outd(struct Z80* z80)
+{
+    uint8_t const byte = readb(z80, z80->hl);
+    out(z80, z80->bc, byte);
+
+    --z80->b;
+    --z80->hl;
+    uint16_t const tmp = byte + z80->l;
+
+    z80->f = parity((tmp & 0x07) ^ z80->b) | xyflags(z80->b) | szflags(z80->b);
+
+    if (tmp & 0x100)
+        z80->f |= C_FLAG | H_FLAG;
+
+    if (byte & S_FLAG)
+        z80->f |= N_FLAG;
+}
+
+static void otdr(struct Z80* z80)
+{
+    outd(z80);
+    if (z80->b)
     {
         z80->pc -= 2;
         z80->cycles += 5;
@@ -1107,21 +1219,20 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x7b: z80->sp = readw(z80, instrw(z80)); break; // ld sp, (nn)
         case 0xa0: ldi(z80); break;                          // ldi
         case 0xa1: cpi(z80); break;                          // cpi
-        case 0xa8: ldd(z80); break;                          // ldd
-        case 0xa9: cpd(z80); break;                          // cpd
-        case 0xb0: ldir(z80); break;                         // ldir
-        case 0xb1: cpir(z80); break;                         // cpir
-        case 0xb8: lddr(z80); break;                         // lddr
-        case 0xb9: cpdr(z80); break;                         // cpdr
-
-        case 0xa2:
-        case 0xa3:
-        case 0xaa:
-        case 0xab:
-        case 0xb2:
-        case 0xb3:
-        case 0xba:
-        case 0xbb: break; // @TODO impl these
+        case 0xa2: ini(z80); break;
+        case 0xa3: outi(z80); break; // outi
+        case 0xa8: ldd(z80); break;  // ldd
+        case 0xa9: cpd(z80); break;  // cpd
+        case 0xaa: ind(z80); break;  // ind
+        case 0xab: outd(z80); break; // outd
+        case 0xb0: ldir(z80); break; // ldir
+        case 0xb1: cpir(z80); break; // cpir
+        case 0xb2: inir(z80); break; // inir
+        case 0xb3: otir(z80); break; // otir
+        case 0xb8: lddr(z80); break; // lddr
+        case 0xb9: cpdr(z80); break; // cpdr
+        case 0xba: indr(z80); break; // indr
+        case 0xbb: otdr(z80); break; // otdr
 
         default:
             printf("unimplemented opcode 0xed%02X at %x\n", opcode, z80->pc - 1);
