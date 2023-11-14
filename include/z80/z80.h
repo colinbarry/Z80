@@ -1,6 +1,7 @@
 #include <stdint.h>
 
-struct Z80 {
+struct Z80
+{
     uint8_t (*mem_load)(struct Z80*, uint16_t);
     void (*mem_store)(struct Z80*, uint16_t, uint8_t);
     uint8_t (*port_load)(struct Z80*, uint16_t);
@@ -15,14 +16,78 @@ struct Z80 {
     uint16_t sp;
     uint16_t ix;
     uint16_t iy;
-    union { struct { uint8_t f; uint8_t a; }; uint16_t af; };
-    union { struct { uint8_t c; uint8_t b; }; uint16_t bc; };
-    union { struct { uint8_t e; uint8_t d; }; uint16_t de; };
-    union { struct { uint8_t l; uint8_t h; }; uint16_t hl; };
-    union { struct { uint8_t fp; uint8_t ap; }; uint16_t afp; };
-    union { struct { uint8_t cp; uint8_t bp; }; uint16_t bcp; };
-    union { struct { uint8_t ep; uint8_t dp; }; uint16_t dep; };
-    union { struct { uint8_t lp; uint8_t hp; }; uint16_t hlp; };
+    union
+    {
+        struct
+        {
+            uint8_t f;
+            uint8_t a;
+        };
+        uint16_t af;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t c;
+            uint8_t b;
+        };
+        uint16_t bc;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t e;
+            uint8_t d;
+        };
+        uint16_t de;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t l;
+            uint8_t h;
+        };
+        uint16_t hl;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t fp;
+            uint8_t ap;
+        };
+        uint16_t afp;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t cp;
+            uint8_t bp;
+        };
+        uint16_t bcp;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t ep;
+            uint8_t dp;
+        };
+        uint16_t dep;
+    };
+    union
+    {
+        struct
+        {
+            uint8_t lp;
+            uint8_t hp;
+        };
+        uint16_t hlp;
+    };
     uint8_t i, r;
     uint8_t interrupt_mode;
     uint8_t iff1, iff2;

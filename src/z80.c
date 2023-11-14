@@ -764,7 +764,7 @@ static void handle_interrupts(struct Z80* z80, uint8_t const data)
 
     if (z80->iff1)
     {
-        z80->iff1 = z80->iff2 = 0;
+        z80->iff1 = 0;
 
         switch (z80->interrupt_mode)
         {
@@ -1029,7 +1029,10 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
 
         case 0xcb: exec_indexcb_instr(z80, sel); break;
 
-        default: break; // nop
+        default:
+            z80->cycles += 4;
+            exec_instr(z80, opcode);
+            return; // nop
     }
 
     z80->cycles += index_opcode_cycles[opcode];
@@ -1131,6 +1134,10 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x43: writew(z80, instrw(z80), z80->bc); break; // ld (nn), bc
         case 0x44: z80->a = subb(z80, 0, z80->a, 0); break;  // neg
         case 0x45:
+        case 0x55:
+        case 0x65:
+        case 0x75:
+        case 0x7d:
             z80->pc = pop(z80);
             z80->iff1 = z80->iff2;
             break; // retn
@@ -1143,7 +1150,9 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->hl = addcw(z80, z80->hl, z80->bc, z80->f & C_FLAG);
             break;                                           // adc hl, bc
         case 0x4b: z80->bc = readw(z80, instrw(z80)); break; // ld bc, (nn)
-        case 0x4d: z80->pc = pop(z80); break;                // reti
+        case 0x4d:
+        case 0x5d:
+        case 0x6d: z80->pc = pop(z80); break; // reti
         case 0x4e:
         case 0x6e: z80->interrupt_mode = 0; break;   // im 0/1 [undoc]
         case 0x4f: z80->r = z80->a; break;           // ld r, a
@@ -1160,15 +1169,6 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
         case 0x6c:
         case 0x74:
         case 0x7c: z80->a = subb(z80, 0, z80->a, 0); break; // neg [undoc]
-        case 0x55:
-        case 0x65:
-        case 0x75:
-        case 0x5d:
-        case 0x6d:
-        case 0x7d:
-            z80->iff1 = z80->iff2;
-            z80->pc = pop(z80);
-            break; // ret
         case 0x56:
         case 0x76: z80->interrupt_mode = 1; break; // im 1
         case 0x57:
