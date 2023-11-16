@@ -1380,7 +1380,6 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x75: writeb(z80, z80->hl, z80->l); break;          // ld (hl), l
         case 0x76:
             z80->halted = 1;
-            --z80->pc;
             break;                                               // halt
         case 0x77: writeb(z80, z80->hl, z80->a); break;          // ld (hl), a
         case 0x78: z80->a = z80->b; break;                       // ld a, b
