@@ -784,7 +784,7 @@ static void handle_interrupts(struct Z80* z80, uint8_t const data)
             case 2: {
                 z80->cycles += 19;
                 push(z80, z80->pc);
-                z80->pc = readw(z80, (z80->i << 8) | data);
+                z80->pc = readw(z80, ((z80->i << 8) | data) & 0xFFFE);
                 break;
             }
         }
