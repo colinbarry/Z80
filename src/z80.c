@@ -879,7 +879,7 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0x26: *h = instrb(z80); break;                // ld i*h, n
         case 0x29: *reg = addw(z80, *reg, *reg); break;    // add i*, i*
         case 0x2a: *reg = readw(z80, instrw(z80)); break;  // ld i*, (nn)
-        case 0x2b: --(*reg); break;                        // dec ix
+        case 0x2b: --(*reg); break;                        // dec i*
         case 0x2c: *l = incb(z80, *l); break;              // inc i*l
         case 0x2d: *l = decb(z80, *l); break;              // dec i*l
         case 0x2e: *l = instrb(z80); break;                // ld i*l, n
@@ -1002,20 +1002,20 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
         case 0xa5: and(z80, *reg); break;      // and i*l
         case 0xa6:
             and(z80, readw(z80, *reg + dispb(z80)));
-            break;                             // and (ix + d)
+            break;                             // and (i* + d)
         case 0xac: xor(z80, *reg >> 8); break; // xor i*h
         case 0xad: xor(z80, *reg); break;      // xor i*l
         case 0xae:
             xor(z80, readw(z80, *reg + dispb(z80)));
-            break;                             // xor (ix + d)
+            break;                             // xor (i* + d)
         case 0xb4: or (z80, *reg >> 8); break; // or i*h
         case 0xb5: or (z80, *reg); break;      // or i*l
         case 0xb6:
             or (z80, readw(z80, *reg + dispb(z80)));
-            break;                                                // or (ix + d)
+            break;                                                // or (i* + d)
         case 0xbc: cp(z80, *reg >> 8); break;                     // cp i*h
         case 0xbd: cp(z80, *reg); break;                          // cp i*l
-        case 0xbe: cp(z80, readw(z80, *reg + dispb(z80))); break; // cp (ix + d)
+        case 0xbe: cp(z80, readw(z80, *reg + dispb(z80))); break; // cp (i* + d)
         case 0xe1: *reg = pop(z80); break;                        // pop i*
         case 0xe3: {
             uint16_t tmp = *reg;
