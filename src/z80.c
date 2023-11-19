@@ -1190,7 +1190,7 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             z80->f |= szflags(z80->a) | xyflags(z80->a);
             break;                                   // ld a, r
         case 0x60: z80->h = inbc(z80); break;        // in h, (c)
-        case 0x61: out(z80, z80->bc, z80->d); break; // out (c), h
+        case 0x61: out(z80, z80->bc, z80->h); break; // out (c), h
         case 0x62:
             z80->hl = subcw(z80, z80->hl, z80->hl, z80->f & C_FLAG);
             break;                                           // sbc hl, hl
@@ -1203,8 +1203,8 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
             break;                                           // adc hl, hl
         case 0x6b: z80->hl = readw(z80, instrw(z80)); break; // ld hl, (nn)
         case 0x6f: rld(z80); break;                          // rld
-        case 0x70: inbc(z80); break;                         // in l, (c)
-        case 0x71: out(z80, z80->bc, 0); break;              // out (c), a
+        case 0x70: inbc(z80); break;                         // in (c)
+        case 0x71: out(z80, z80->bc, 0); break;              // out (c), 0
         case 0x72:
             z80->hl = subcw(z80, z80->hl, z80->sp, z80->f & C_FLAG);
             break;                                           // sbc hl, sp
