@@ -87,22 +87,22 @@ static uint8_t mask(uint8_t byte, uint8_t bits, int condition)
     return condition ? set(byte, bits) : reset(byte, bits);
 }
 
-static uint8_t readb(struct Z80* z80, int16_t const addr)
+static uint8_t readb(struct Z80* z80, uint16_t const addr)
 {
     return z80->mem_load(z80, addr);
 }
 
-static uint16_t readw(struct Z80* z80, int16_t const addr)
+static uint16_t readw(struct Z80* z80, uint16_t const addr)
 {
     return readb(z80, addr) + (readb(z80, addr + 1) << 8);
 }
 
-static void writeb(struct Z80* z80, int16_t const addr, uint8_t const value)
+static void writeb(struct Z80* z80, uint16_t const addr, uint8_t const value)
 {
     z80->mem_store(z80, addr, value);
 }
 
-static void writew(struct Z80* z80, int16_t const addr, uint16_t const value)
+static void writew(struct Z80* z80, uint16_t const addr, uint16_t const value)
 {
     writeb(z80, addr, value & 0xff);
     writeb(z80, addr + 1, value >> 8);
