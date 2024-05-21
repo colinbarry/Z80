@@ -11,16 +11,16 @@ uint8_t memory[MEMORY_SIZE] = {0};
 /**
  * Any named tests will be skipped.
  */
-static char const* const tests_to_skip[] = {"76", /* FUSE tests say PC doesn't
+static char const *const tests_to_skip[] = {"76", /* FUSE tests say PC doesn't
                                                    * increment on HALT. Not
                                                    * doing so break PAUSE on the
                                                    * 48k Spectrum. */
                                             NULL};
 /** True if the named test is in the skip list.
  */
-static bool skip_test(char const* s)
+static bool skip_test(char const *s)
 {
-    char const* const* test = tests_to_skip;
+    char const *const *test = tests_to_skip;
     while (*test)
     {
         if (strcmp(s, *test) == 0)
@@ -36,60 +36,60 @@ static bool skip_test(char const* s)
     return false;
 }
 
-#define CHECK_REG(REG)                                                 \
-    if (z80.REG != assert->regs.REG)                                   \
-    {                                                                  \
-        if (!traced_name)                                              \
-        {                                                              \
-            traced_name = true;                                        \
-            puts(test->label);                                         \
-        }                                                              \
-        ok = false;                                                    \
-        printf("  FAIL: " #REG " // expected 0x%04x, actual 0x%04x\n", \
-               assert->regs.REG,                                       \
-               z80.REG);                                               \
+#define CHECK_REG(REG)                                                         \
+    if (z80.REG != assert->regs.REG)                                           \
+    {                                                                          \
+        if (!traced_name)                                                      \
+        {                                                                      \
+            traced_name = true;                                                \
+            puts(test->label);                                                 \
+        }                                                                      \
+        ok = false;                                                            \
+        printf("  FAIL: " #REG " // expected 0x%04x, actual 0x%04x\n",         \
+               assert->regs.REG,                                               \
+               z80.REG);                                                       \
     }
 
-#define CHECK_REG_MASK(REG, MASK)                                      \
-    if ((z80.REG & MASK) != (assert->regs.REG& MASK))                  \
-    {                                                                  \
-        if (!traced_name)                                              \
-        {                                                              \
-            traced_name = true;                                        \
-            puts(test->label);                                         \
-        }                                                              \
-        ok = false;                                                    \
-        printf("  FAIL: " #REG " // expected 0x%04x, actual 0x%04x\n", \
-               assert->regs.REG& MASK,                                 \
-               z80.REG& MASK);                                         \
+#define CHECK_REG_MASK(REG, MASK)                                              \
+    if ((z80.REG & MASK) != (assert->regs.REG &MASK))                          \
+    {                                                                          \
+        if (!traced_name)                                                      \
+        {                                                                      \
+            traced_name = true;                                                \
+            puts(test->label);                                                 \
+        }                                                                      \
+        ok = false;                                                            \
+        printf("  FAIL: " #REG " // expected 0x%04x, actual 0x%04x\n",         \
+               assert->regs.REG &MASK,                                         \
+               z80.REG &MASK);                                                 \
     }
 
-uint8_t mem_load(struct Z80* z80, uint16_t addr)
+uint8_t mem_load(struct Z80 *z80, uint16_t addr)
 {
     (void)z80;
     return memory[addr];
 }
 
-void mem_store(struct Z80* z80, uint16_t addr, uint8_t val)
+void mem_store(struct Z80 *z80, uint16_t addr, uint8_t val)
 {
     (void)z80;
     memory[addr] = val;
 }
 
-uint8_t port_load(struct Z80* z80, uint16_t port)
+uint8_t port_load(struct Z80 *z80, uint16_t port)
 {
     (void)z80;
     return port >> 8;
 }
 
-void port_store(struct Z80* z80, uint16_t port, uint8_t val)
+void port_store(struct Z80 *z80, uint16_t port, uint8_t val)
 {
     (void)z80;
     (void)port;
     (void)val;
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
@@ -99,9 +99,9 @@ int main(int argc, char** argv)
     struct Z80 z80;
     for (size_t i = 0; i < tests.num_tests; ++i)
     {
-        struct Test const* test = &tests.tests[i];
-        struct Arrange const* arrange = &test->arrange;
-        struct Assert const* assert = &test->assert;
+        struct Test const *test = &tests.tests[i];
+        struct Arrange const *arrange = &test->arrange;
+        struct Assert const *assert = &test->assert;
 
         if (skip_test(test->label))
             continue;
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
 
         for (int ci = 0; ci < arrange->num_chunks; ++ci)
         {
-            struct Chunk const* chunk = &arrange->chunks[ci];
+            struct Chunk const *chunk = &arrange->chunks[ci];
             memcpy(memory + chunk->addr, &chunk->data, chunk->length);
         }
 

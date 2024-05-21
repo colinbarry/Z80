@@ -50,7 +50,7 @@ struct Assert
 
 struct Test
 {
-    char const* label;
+    char const *label;
     struct Arrange arrange;
     struct Assert assert;
 };

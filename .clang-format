@@ -1,4 +1,4 @@
-BasedOnStyle: chromium
+BasedOnStyle: LLVM
 Language:        Cpp
 BreakStringLiterals: true
 BreakBeforeTernaryOperators: true
@@ -20,6 +20,7 @@ BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: AfterComma
 AllowAllParametersOfDeclarationOnNextLine: false
 ContinuationIndentWidth: 4
+IndentCaseLabels: true
 
 AlignAfterOpenBracket: Align
 BinPackArguments: false

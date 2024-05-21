@@ -87,40 +87,40 @@ static uint8_t mask(uint8_t byte, uint8_t bits, int condition)
     return condition ? set(byte, bits) : reset(byte, bits);
 }
 
-static uint8_t readb(struct Z80* z80, uint16_t const addr)
+static uint8_t readb(struct Z80 *z80, uint16_t const addr)
 {
     return z80->mem_load(z80, addr);
 }
 
-static uint16_t readw(struct Z80* z80, uint16_t const addr)
+static uint16_t readw(struct Z80 *z80, uint16_t const addr)
 {
     return readb(z80, addr) + (readb(z80, addr + 1) << 8);
 }
 
-static void writeb(struct Z80* z80, uint16_t const addr, uint8_t const value)
+static void writeb(struct Z80 *z80, uint16_t const addr, uint8_t const value)
 {
     z80->mem_store(z80, addr, value);
 }
 
-static void writew(struct Z80* z80, uint16_t const addr, uint16_t const value)
+static void writew(struct Z80 *z80, uint16_t const addr, uint16_t const value)
 {
     writeb(z80, addr, value & 0xff);
     writeb(z80, addr + 1, value >> 8);
 }
 
-static uint8_t instrb(struct Z80* z80)
+static uint8_t instrb(struct Z80 *z80)
 {
     return readb(z80, z80->pc++);
 }
 
 /** Reads a displacement byte from the current instruction.
  * */
-static int8_t dispb(struct Z80* z80)
+static int8_t dispb(struct Z80 *z80)
 {
     return (int8_t)readb(z80, z80->pc++);
 }
 
-static uint16_t instrw(struct Z80* z80)
+static uint16_t instrw(struct Z80 *z80)
 {
     return instrb(z80) + (instrb(z80) << 8);
 }
@@ -157,7 +157,7 @@ static uint8_t halfcarry(uint8_t const a, uint8_t const b, uint8_t c)
     return ((a & 0x0f) + (b & 0x0f) + c) & 0x10 ? H_FLAG : 0;
 }
 
-static uint8_t addb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
+static uint8_t addb(struct Z80 *z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
 {
     uint16_t const result = arg1 + arg2 + carry;
     z80->f = szflags((uint8_t)result) | xyflags(result)
@@ -166,7 +166,7 @@ static uint8_t addb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t c
     return (uint8_t)result;
 }
 
-static uint16_t addw(struct Z80* z80, uint16_t const arg1, uint16_t const arg2)
+static uint16_t addw(struct Z80 *z80, uint16_t const arg1, uint16_t const arg2)
 {
     uint8_t flags = z80->f;
     uint8_t l = addb(z80, arg1 & 0xFF, arg2 & 0xFF, 0);
@@ -178,7 +178,7 @@ static uint16_t addw(struct Z80* z80, uint16_t const arg1, uint16_t const arg2)
     return (h << 8) + l;
 }
 
-static uint16_t addcw(struct Z80* z80,
+static uint16_t addcw(struct Z80 *z80,
                       uint16_t const arg1,
                       uint16_t const arg2,
                       uint8_t const carry)
@@ -199,7 +199,7 @@ static uint16_t addcw(struct Z80* z80,
     return result;
 }
 
-static uint8_t subb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
+static uint8_t subb(struct Z80 *z80, uint8_t arg1, uint8_t const arg2, uint8_t const carry)
 {
     uint16_t const result = addb(z80, arg1, ~arg2, !carry);
     z80->f ^= (C_FLAG | H_FLAG);
@@ -207,7 +207,7 @@ static uint8_t subb(struct Z80* z80, uint8_t arg1, uint8_t const arg2, uint8_t c
     return (uint8_t)result;
 }
 
-static uint16_t subcw(struct Z80* z80,
+static uint16_t subcw(struct Z80 *z80,
                       uint16_t const arg1,
                       uint16_t const arg2,
                       uint8_t const carry)
@@ -218,7 +218,7 @@ static uint16_t subcw(struct Z80* z80,
     return result;
 }
 
-static uint8_t incb(struct Z80* z80, uint8_t const val)
+static uint8_t incb(struct Z80 *z80, uint8_t const val)
 {
     uint8_t result = val + 1;
     z80->f = szflags(result) | halfcarry(val, 1, 0) | xyflags(result)
@@ -226,7 +226,7 @@ static uint8_t incb(struct Z80* z80, uint8_t const val)
     return result;
 }
 
-static uint8_t decb(struct Z80* z80, uint8_t const val)
+static uint8_t decb(struct Z80 *z80, uint8_t const val)
 {
     uint8_t result = val - 1;
     z80->f = szflags(result) | (halfcarry(val, -1, 0) ^ H_FLAG) | N_FLAG
@@ -252,34 +252,34 @@ static void or(struct Z80* z80, uint8_t const val)
     z80->f = szflags(z80->a) | parity(z80->a) | xyflags(z80->a);
 }
 
-static void cp(struct Z80* z80, uint8_t const val)
+static void cp(struct Z80 *z80, uint8_t const val)
 {
     subb(z80, z80->a, val, 0);
     z80->f &= ~(X_FLAG | Y_FLAG);
     z80->f |= xyflags(val);
 }
 
-static void push(struct Z80* z80, uint16_t const val)
+static void push(struct Z80 *z80, uint16_t const val)
 {
     writeb(z80, --z80->sp, val >> 8);
     writeb(z80, --z80->sp, val & 0xFF);
 }
 
-static uint16_t pop(struct Z80* z80)
+static uint16_t pop(struct Z80 *z80)
 {
     uint8_t const l = readb(z80, z80->sp++);
     uint8_t const h = readb(z80, z80->sp++);
     return (h << 8) + l;
 }
 
-static void jp(struct Z80* z80, int test)
+static void jp(struct Z80 *z80, int test)
 {
     uint16_t const addr = instrw(z80);
     if (test)
         z80->pc = addr;
 }
 
-static void jr(struct Z80* z80, int test)
+static void jr(struct Z80 *z80, int test)
 {
     int8_t const offset = (int8_t)instrb(z80);
     if (test)
@@ -289,14 +289,14 @@ static void jr(struct Z80* z80, int test)
     }
 }
 
-static void call(struct Z80* z80)
+static void call(struct Z80 *z80)
 {
     uint16_t const addr = instrw(z80);
     push(z80, z80->pc);
     z80->pc = addr;
 }
 
-static void callc(struct Z80* z80, int test)
+static void callc(struct Z80 *z80, int test)
 {
     uint16_t const addr = instrw(z80);
     if (test)
@@ -307,7 +307,7 @@ static void callc(struct Z80* z80, int test)
     }
 }
 
-static void retc(struct Z80* z80, int test)
+static void retc(struct Z80 *z80, int test)
 {
     if (test)
     {
@@ -316,17 +316,17 @@ static void retc(struct Z80* z80, int test)
     }
 }
 
-static uint8_t in(struct Z80* z80, uint16_t const port)
+static uint8_t in(struct Z80 *z80, uint16_t const port)
 {
     return z80->port_load(z80, port);
 }
 
-static void out(struct Z80* z80, uint16_t const port, uint8_t const val)
+static void out(struct Z80 *z80, uint16_t const port, uint8_t const val)
 {
     z80->port_store(z80, port, val);
 }
 
-static void ldd(struct Z80* z80)
+static void ldd(struct Z80 *z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
     uint8_t const result = z80->a + byte;
@@ -341,7 +341,7 @@ static void ldd(struct Z80* z80)
         z80->f |= P_FLAG;
 }
 
-static void lddr(struct Z80* z80)
+static void lddr(struct Z80 *z80)
 {
     ldd(z80);
     if (z80->f & P_FLAG)
@@ -351,7 +351,7 @@ static void lddr(struct Z80* z80)
     }
 }
 
-static void ldi(struct Z80* z80)
+static void ldi(struct Z80 *z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
     uint8_t const result = z80->a + byte;
@@ -366,7 +366,7 @@ static void ldi(struct Z80* z80)
         z80->f |= P_FLAG;
 }
 
-static void ldir(struct Z80* z80)
+static void ldir(struct Z80 *z80)
 {
     ldi(z80);
     if (z80->f & P_FLAG)
@@ -376,7 +376,7 @@ static void ldir(struct Z80* z80)
     }
 }
 
-static void ini(struct Z80* z80)
+static void ini(struct Z80 *z80)
 {
     uint8_t const byte = in(z80, z80->bc);
     uint16_t const tmp = byte + ((z80->c + 1) & 0xff);
@@ -394,7 +394,7 @@ static void ini(struct Z80* z80)
         z80->f |= N_FLAG;
 }
 
-static void inir(struct Z80* z80)
+static void inir(struct Z80 *z80)
 {
     ini(z80);
     if (z80->b)
@@ -404,7 +404,7 @@ static void inir(struct Z80* z80)
     }
 }
 
-static void ind(struct Z80* z80)
+static void ind(struct Z80 *z80)
 {
     uint8_t const byte = in(z80, z80->bc);
     uint16_t const tmp = byte + ((z80->c - 1) & 0xff);
@@ -422,7 +422,7 @@ static void ind(struct Z80* z80)
         z80->f |= N_FLAG;
 }
 
-static void indr(struct Z80* z80)
+static void indr(struct Z80 *z80)
 {
     ind(z80);
     if (z80->b)
@@ -432,7 +432,7 @@ static void indr(struct Z80* z80)
     }
 }
 
-static void outi(struct Z80* z80)
+static void outi(struct Z80 *z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
     out(z80, z80->bc, byte);
@@ -450,7 +450,7 @@ static void outi(struct Z80* z80)
         z80->f |= N_FLAG;
 }
 
-static void otir(struct Z80* z80)
+static void otir(struct Z80 *z80)
 {
     outi(z80);
     if (z80->b)
@@ -460,7 +460,7 @@ static void otir(struct Z80* z80)
     }
 }
 
-static void outd(struct Z80* z80)
+static void outd(struct Z80 *z80)
 {
     uint8_t const byte = readb(z80, z80->hl);
     out(z80, z80->bc, byte);
@@ -478,7 +478,7 @@ static void outd(struct Z80* z80)
         z80->f |= N_FLAG;
 }
 
-static void otdr(struct Z80* z80)
+static void otdr(struct Z80 *z80)
 {
     outd(z80);
     if (z80->b)
@@ -488,7 +488,7 @@ static void otdr(struct Z80* z80)
     }
 }
 
-static void cpd(struct Z80* z80)
+static void cpd(struct Z80 *z80)
 {
     uint8_t const flags = z80->f;
     uint8_t const val = readb(z80, z80->hl);
@@ -510,7 +510,7 @@ static void cpd(struct Z80* z80)
         z80->f |= X_FLAG;
 }
 
-static void cpdr(struct Z80* z80)
+static void cpdr(struct Z80 *z80)
 {
     cpd(z80);
     if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
@@ -520,7 +520,7 @@ static void cpdr(struct Z80* z80)
     }
 }
 
-static void cpi(struct Z80* z80)
+static void cpi(struct Z80 *z80)
 {
     uint8_t const flags = z80->f;
     uint8_t const val = readb(z80, z80->hl);
@@ -542,7 +542,7 @@ static void cpi(struct Z80* z80)
         z80->f |= X_FLAG;
 }
 
-static void cpir(struct Z80* z80)
+static void cpir(struct Z80 *z80)
 {
     cpi(z80);
     if ((z80->f & P_FLAG) && (~z80->f & Z_FLAG))
@@ -552,7 +552,7 @@ static void cpir(struct Z80* z80)
     }
 }
 
-static uint8_t rlc(struct Z80* z80, uint8_t val)
+static uint8_t rlc(struct Z80 *z80, uint8_t val)
 {
     z80->f = 0;
     if (val & 0x80)
@@ -563,7 +563,7 @@ static uint8_t rlc(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static void rlca(struct Z80* z80)
+static void rlca(struct Z80 *z80)
 {
     const uint8_t flags = z80->f;
     z80->a = rlc(z80, z80->a);
@@ -571,7 +571,7 @@ static void rlca(struct Z80* z80)
     z80->f |= flags & (S_FLAG | Z_FLAG | P_FLAG);
 }
 
-static uint8_t rrc(struct Z80* z80, uint8_t val)
+static uint8_t rrc(struct Z80 *z80, uint8_t val)
 {
     z80->f = 0;
     if (val & 0x01)
@@ -582,7 +582,7 @@ static uint8_t rrc(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static void rrca(struct Z80* z80)
+static void rrca(struct Z80 *z80)
 {
     const uint8_t flags = z80->f;
     z80->a = rrc(z80, z80->a);
@@ -590,7 +590,7 @@ static void rrca(struct Z80* z80)
     z80->f |= flags & (S_FLAG | Z_FLAG | P_FLAG);
 }
 
-static uint8_t rl(struct Z80* z80, uint8_t val)
+static uint8_t rl(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
     val = (val << 1) | (z80->f & C_FLAG);
@@ -599,7 +599,7 @@ static uint8_t rl(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static void rla(struct Z80* z80)
+static void rla(struct Z80 *z80)
 {
     const uint8_t flags = z80->f;
     z80->a = rl(z80, z80->a);
@@ -607,7 +607,7 @@ static void rla(struct Z80* z80)
     z80->f |= flags & (S_FLAG | Z_FLAG | P_FLAG);
 }
 
-static uint8_t rr(struct Z80* z80, uint8_t val)
+static uint8_t rr(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = val & 0x01;
     val = (val >> 1) | ((z80->f & C_FLAG) << 7);
@@ -616,7 +616,7 @@ static uint8_t rr(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static void rra(struct Z80* z80)
+static void rra(struct Z80 *z80)
 {
     const uint8_t flags = z80->f;
     z80->a = rr(z80, z80->a);
@@ -624,7 +624,7 @@ static void rra(struct Z80* z80)
     z80->f |= flags & (S_FLAG | Z_FLAG | P_FLAG);
 }
 
-static uint8_t sla(struct Z80* z80, uint8_t val)
+static uint8_t sla(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
     val = val << 1;
@@ -633,7 +633,7 @@ static uint8_t sla(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static uint8_t sra(struct Z80* z80, uint8_t val)
+static uint8_t sra(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = val & 0x01;
     val = (val >> 1) | (val & 0x80);
@@ -642,7 +642,7 @@ static uint8_t sra(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static uint8_t sll(struct Z80* z80, uint8_t val)
+static uint8_t sll(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = (val & 0x80) ? 0x01 : 0x00;
     val = (val << 1) | 0x01;
@@ -651,7 +651,7 @@ static uint8_t sll(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static uint8_t srl(struct Z80* z80, uint8_t val)
+static uint8_t srl(struct Z80 *z80, uint8_t val)
 {
     uint8_t carry = val & 0x01;
     val = (val >> 1);
@@ -660,7 +660,7 @@ static uint8_t srl(struct Z80* z80, uint8_t val)
     return val;
 }
 
-static void rrd(struct Z80* z80)
+static void rrd(struct Z80 *z80)
 {
     uint8_t const val = readb(z80, z80->hl);
     uint8_t const memh = (val & 0xf0) >> 4;
@@ -673,7 +673,7 @@ static void rrd(struct Z80* z80)
     z80->f = szflags(z80->a) | xyflags(z80->a) | (z80->f & C_FLAG) | parity(z80->a);
 }
 
-static void rld(struct Z80* z80)
+static void rld(struct Z80 *z80)
 {
     uint8_t const val = readb(z80, z80->hl);
     uint8_t const memh = (val & 0xf0) >> 4;
@@ -686,7 +686,7 @@ static void rld(struct Z80* z80)
     z80->f = szflags(z80->a) | xyflags(z80->a) | (z80->f & C_FLAG) | parity(z80->a);
 }
 
-static void daa(struct Z80* z80)
+static void daa(struct Z80 *z80)
 {
     uint8_t val = z80->a;
     if (z80->f & N_FLAG)
@@ -722,14 +722,14 @@ static void daa(struct Z80* z80)
     z80->a = val;
 }
 
-static void cpl(struct Z80* z80)
+static void cpl(struct Z80 *z80)
 {
     z80->a = ~z80->a;
     z80->f &= ~(X_FLAG | Y_FLAG);
     z80->f |= (H_FLAG | N_FLAG) | (z80->a & (X_FLAG | Y_FLAG));
 }
 
-static void ccf(struct Z80* z80)
+static void ccf(struct Z80 *z80)
 {
     uint8_t prev_carry = (z80->f & C_FLAG) << 4;
     z80->f ^= C_FLAG;
@@ -737,13 +737,13 @@ static void ccf(struct Z80* z80)
     z80->f |= prev_carry | (z80->a & (X_FLAG | Y_FLAG));
 }
 
-static void scf(struct Z80* z80)
+static void scf(struct Z80 *z80)
 {
     z80->f &= ~(H_FLAG | N_FLAG | X_FLAG | Y_FLAG);
     z80->f |= C_FLAG | (z80->a & (X_FLAG | Y_FLAG));
 }
 
-static uint8_t inbc(struct Z80* z80)
+static uint8_t inbc(struct Z80 *z80)
 {
     uint8_t const carry = z80->f & C_FLAG;
     uint8_t const val = in(z80, ((uint16_t)z80->b << 8) | z80->c);
@@ -751,14 +751,14 @@ static uint8_t inbc(struct Z80* z80)
     return val;
 }
 
-static void incr(struct Z80* z80)
+static void incr(struct Z80 *z80)
 {
     z80->r = (z80->r & 0x80) | ((z80->r & 0x7F) + 1);
 }
 
-static void exec_instr(struct Z80* z80, uint8_t const opcode);
+static void exec_instr(struct Z80 *z80, uint8_t const opcode);
 
-static void handle_interrupts(struct Z80* z80, uint8_t const data)
+static void handle_interrupts(struct Z80 *z80, uint8_t const data)
 {
     z80->halted = 0;
 
@@ -791,9 +791,9 @@ static void handle_interrupts(struct Z80* z80, uint8_t const data)
     }
 }
 
-static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
+static void exec_indexcb_instr(struct Z80 *z80, uint8_t const sel)
 {
-    uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
+    uint16_t *reg = sel == 0xdd ? &z80->ix : &z80->iy;
     uint16_t const addr = *reg + (int8_t)instrb(z80);
     uint8_t const opcode = instrb(z80);
 
@@ -859,11 +859,11 @@ static void exec_indexcb_instr(struct Z80* z80, uint8_t const sel)
     z80->cycles += (op == 0x01 ? 20 : 23);
 }
 
-static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const opcode)
+static void exec_index_instr(struct Z80 *z80, uint8_t const sel, uint8_t const opcode)
 {
-    uint16_t* reg = sel == 0xdd ? &z80->ix : &z80->iy;
-    uint8_t* l = (uint8_t*)reg;
-    uint8_t* h = l + 1;
+    uint16_t *reg = sel == 0xdd ? &z80->ix : &z80->iy;
+    uint8_t *l = (uint8_t *)reg;
+    uint8_t *h = l + 1;
 
     incr(z80);
 
@@ -1038,7 +1038,7 @@ static void exec_index_instr(struct Z80* z80, uint8_t const sel, uint8_t const o
     z80->cycles += index_opcode_cycles[opcode];
 }
 
-static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
+static void exec_cb_instr(struct Z80 *z80, uint8_t const opcode)
 {
     uint8_t const op = opcode >> 6;
     uint8_t const type = (opcode >> 3) & 0x7;
@@ -1120,7 +1120,7 @@ static void exec_cb_instr(struct Z80* z80, uint8_t const opcode)
     }
 }
 
-static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
+static void exec_ed_instr(struct Z80 *z80, uint8_t const opcode)
 {
     incr(z80);
 
@@ -1244,7 +1244,7 @@ static void exec_ed_instr(struct Z80* z80, uint8_t const opcode)
     z80->cycles += ed_opcode_cycles[opcode];
 }
 
-static void exec_instr(struct Z80* z80, uint8_t const opcode)
+static void exec_instr(struct Z80 *z80, uint8_t const opcode)
 {
     switch (opcode)
     {
@@ -1378,9 +1378,7 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
         case 0x73: writeb(z80, z80->hl, z80->e); break;          // ld (hl), e
         case 0x74: writeb(z80, z80->hl, z80->h); break;          // ld (hl), h
         case 0x75: writeb(z80, z80->hl, z80->l); break;          // ld (hl), l
-        case 0x76:
-            z80->halted = 1;
-            break;                                               // halt
+        case 0x76: z80->halted = 1; break;                       // halt
         case 0x77: writeb(z80, z80->hl, z80->a); break;          // ld (hl), a
         case 0x78: z80->a = z80->b; break;                       // ld a, b
         case 0x79: z80->a = z80->c; break;                       // ld a, c
@@ -1609,14 +1607,14 @@ static void exec_instr(struct Z80* z80, uint8_t const opcode)
 
 /*****************************************************************************/
 
-void z80_init(struct Z80* z80)
+void z80_init(struct Z80 *z80)
 {
     memset(z80, 0, sizeof(struct Z80));
     z80->sp = 0xffff;
     z80->a = 0xff;
 }
 
-int64_t z80_step(struct Z80* z80)
+int64_t z80_step(struct Z80 *z80)
 {
     int64_t const cycles = z80->cycles;
 
@@ -1642,18 +1640,18 @@ int64_t z80_step(struct Z80* z80)
     return z80->cycles - cycles;
 }
 
-int z80_is_halted(struct Z80 const* z80)
+int z80_is_halted(struct Z80 const *z80)
 {
     return z80->halted;
 }
 
-void z80_interrupt(struct Z80* z80, uint8_t data)
+void z80_interrupt(struct Z80 *z80, uint8_t data)
 {
     if (z80->interrupt_delay == 0)
         handle_interrupts(z80, data);
 }
 
-void z80_trace(struct Z80* z80)
+void z80_trace(struct Z80 *z80)
 {
     printf("BC:0x%04X DE:0x%04X HL:0x%04X A:0x%02X\n", z80->bc, z80->de, z80->hl, z80->a);
     printf("F:%c%c%c%c%c%c%c%c\n",
