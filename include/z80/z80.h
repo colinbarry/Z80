@@ -1,10 +1,24 @@
 #include <stdint.h>
 
+/** State of the Z80 microprocessor.
+ */
 struct Z80
 {
+    /** mem_load must be set to a function which will load an 8-bit value
+     * from the given address.
+     */
     uint8_t (*mem_load)(struct Z80 *, uint16_t);
+    /** mem_store must be set to a function which will store an 8-bit value
+     * into the given address.
+     */
     void (*mem_store)(struct Z80 *, uint16_t, uint8_t);
+    /** port_load must be set to a function which will read an 8-bit value
+     * from the given port.
+     */
     uint8_t (*port_load)(struct Z80 *, uint16_t);
+    /** port_store must be set to a function which will write an 8-bit value
+     * to the given port.
+     */
     void (*port_store)(struct Z80 *z80, uint16_t, uint8_t);
 
     // Trap will be called on each instruction. Returning a truthy value
@@ -96,12 +110,29 @@ struct Z80
     uint64_t cycles;
 };
 
+/** Initializes a z80 struct to the default state.
+ * @param z80 Pointer to the Z80 struct which will be initialized.
+ */
 void z80_init(struct Z80 *z80);
 
+/** Fetches and executes the next opcode.
+ * @param z80
+ * @return Number of cycles taken to execute the step.
+ */
 int64_t z80_step(struct Z80 *z80);
 
+/** Handle any pending interrupts.
+ * @param z80
+ * @param data The 8-bit value used for the interrupt in mode 0 and 2.
+ */
 void z80_interrupt(struct Z80 *z80, uint8_t data);
 
+/** Checks if the Z80 is in a halted state.
+ * @return true if the Z80 is halted.
+ */
 int z80_is_halted(struct Z80 const *z80);
 
+/** Writes the state of the Z80s registers and flags to the console.
+ * @param z80
+ */
 void z80_trace(struct Z80 *z80);
